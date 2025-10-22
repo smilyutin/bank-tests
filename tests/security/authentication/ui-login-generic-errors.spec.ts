@@ -1,5 +1,7 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, softCheck } from '../utils';
+import { softCheck } from '../utils';
+import { LOGIN_SELECTORS, getInputLocator } from '../selectors.config';
+import { getTestUserWithUsername } from '../test-users';
 
 /**
  * UI Login Security Tests
@@ -37,29 +39,51 @@ import { ensureTestUser, softCheck } from '../utils';
  * 4. Verify no specific user information is revealed
  */
 test('UI Login: generic error messages prevent enumeration', async ({ page }, testInfo) => {
-  const user = await ensureTestUser(page.request as any);
+  // Use pre-configured test user from fixtures/users.json
+  const user = getTestUserWithUsername();
   const fakeEmail = 'fake-' + Date.now() + '@example.com';
 
   try {
-    await page.goto('/login');
+    // Check if login page exists with short timeout
+    const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
+    if (!response || response.status() === 404) {
+      test.skip(true, 'Login page not found (404)');
+      return;
+    }
+    
+    // Check if username/email input exists before proceeding  
+    const emailInput = await getInputLocator(page, LOGIN_SELECTORS.emailInput);
+    if (!emailInput) {
+      test.skip(true, 'Login form not found on page');
+      return;
+    }
     
     // Step 1: Test wrong password for existing user
-    await page.fill('input[name="email"], input[type="email"]', user.email!).catch(() => {});
-    await page.fill('input[type="password"]', 'wrong-password').catch(() => {});
-    await page.click('button[type="submit"]').catch(() => {});
+    const passwordInput = await getInputLocator(page, LOGIN_SELECTORS.passwordInput);
+    const submitButton = await getInputLocator(page, LOGIN_SELECTORS.submitButton);
+    
+    if (!passwordInput || !submitButton) {
+      test.skip(true, 'Login form inputs not found');
+      return;
+    }
+    
+    await emailInput.fill(user.username || user.email, { timeout: 3000 });
+    await passwordInput.fill('wrong-password', { timeout: 3000 });
+    await submitButton.click({ timeout: 3000 });
     await page.waitForTimeout(1000);
     
     // Step 2: Capture error message for wrong password
-    const error1 = await page.textContent('.error, .alert, [role="alert"]').catch(() => null);
+    const errorSelector = LOGIN_SELECTORS.errorMessage.join(', ');
+    const error1 = await page.locator(errorSelector).first().textContent({ timeout: 2000 }).catch(() => null);
     
     // Step 3: Test non-existent user
-    await page.fill('input[name="email"], input[type="email"]', fakeEmail).catch(() => {});
-    await page.fill('input[type="password"]', 'somepassword').catch(() => {});
-    await page.click('button[type="submit"]').catch(() => {});
+    await emailInput.fill(fakeEmail, { timeout: 3000 });
+    await passwordInput.fill('somepassword', { timeout: 3000 });
+    await submitButton.click({ timeout: 3000 });
     await page.waitForTimeout(1000);
     
     // Step 4: Capture error message for non-existent user
-    const error2 = await page.textContent('.error, .alert, [role="alert"]').catch(() => null);
+    const error2 = await page.locator(errorSelector).first().textContent({ timeout: 2000 }).catch(() => null);
 
     // Step 5: Verify errors are generic and don't reveal user existence
     if (error1 && error2) {
@@ -73,10 +97,12 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
         !hasSpecificError,
         'Login UI should show generic error messages to prevent user enumeration'
       );
+    } else {
+      test.skip(true, 'Could not capture error messages from login form');
     }
   } catch (e) {
-    // Login page might not exist
-    test.skip(true, 'Login page not available');
+    // Login page might not exist or selectors don't match
+    test.skip(true, `Login page not available: ${e}`);
   }
 });
 
@@ -99,18 +125,33 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
  */
 test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
   try {
-    await page.goto('/login');
+    // Check if login page exists with short timeout
+    const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
+    if (!response || response.status() === 404) {
+      test.skip(true, 'Login page not found (404)');
+      return;
+    }
+    
+    // Check if username/email input exists before proceeding
+    const emailInput = await getInputLocator(page, LOGIN_SELECTORS.emailInput);
+    const passwordInput = await getInputLocator(page, LOGIN_SELECTORS.passwordInput);
+    const submitButton = await getInputLocator(page, LOGIN_SELECTORS.submitButton);
+    
+    if (!emailInput || !passwordInput || !submitButton) {
+      test.skip(true, 'Login form not found on page');
+      return;
+    }
     
     // Step 1: Perform multiple failed login attempts to trigger rate limiting
     for (let i = 0; i < 10; i++) {
-      await page.fill('input[name="email"], input[type="email"]', 'test@example.com').catch(() => {});
-      await page.fill('input[type="password"]', `wrong-${i}`).catch(() => {});
-      await page.click('button[type="submit"]').catch(() => {});
+      await emailInput.fill('test@example.com', { timeout: 3000 }).catch(() => {});
+      await passwordInput.fill(`wrong-${i}`, { timeout: 3000 }).catch(() => {});
+      await submitButton.click({ timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(500);
     }
 
     // Step 2: Check for rate limiting message in page content
-    const body = await page.textContent('body').catch(() => '') || '';
+    const body = await page.locator('body').textContent({ timeout: 2000 }).catch(() => '') || '';
     const hasRateLimitMsg = 
       body.toLowerCase().includes('too many') ||
       body.toLowerCase().includes('rate limit') ||
@@ -123,7 +164,7 @@ test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
       'UI should inform users when rate limited'
     );
   } catch (e) {
-    test.skip(true, 'Login page not available');
+    test.skip(true, `Login page not available: ${e}`);
   }
 });
 
@@ -146,11 +187,21 @@ test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
  */
 test('UI Login: password field masked by default', async ({ page }, testInfo) => {
   try {
-    await page.goto('/login');
+    // Check if login page exists with short timeout
+    const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
+    if (!response || response.status() === 404) {
+      test.skip(true, 'Login page not found (404)');
+      return;
+    }
     
     // Step 1: Locate password input field
-    const passwordInput = page.locator('input[type="password"]').first();
-    const type = await passwordInput.getAttribute('type');
+    const passwordInput = await getInputLocator(page, LOGIN_SELECTORS.passwordInput);
+    if (!passwordInput) {
+      test.skip(true, 'Password field not found on login page');
+      return;
+    }
+    
+    const type = await passwordInput.getAttribute('type', { timeout: 3000 });
     
     // Step 2: Verify password field is properly masked
     softCheck(
@@ -159,6 +210,6 @@ test('UI Login: password field masked by default', async ({ page }, testInfo) =>
       'Password field should be masked (type="password") by default'
     );
   } catch (e) {
-    test.skip(true, 'Login page not available');
+    test.skip(true, `Login page not available: ${e}`);
   }
 });

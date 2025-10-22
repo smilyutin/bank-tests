@@ -1,0 +1,79 @@
+{
+  "users": [
+    {
+      "email": "e2e+ffcs0r@example.com",
+      "password": "Password123!"
+    },
+    {
+      "email": "test+ul06vr@example.com",
+      "password": "Password123!"
+    },
+    {
+      "email": "test+qa1z76@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2e10jsfrt6",
+      "email": "e2e+10jsfrt6@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eswhnnnof",
+      "email": "e2e+swhnnnof@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2e5q984e2y",
+      "email": "e2e+5q984e2y@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2egc8xxfx6",
+      "email": "e2e+gc8xxfx6@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eejs8i0so",
+      "email": "e2e+ejs8i0so@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2e3obq8w4b",
+      "email": "e2e+3obq8w4b@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eyxl75oqb",
+      "email": "e2e+yxl75oqb@example.com",
+      "password": "Password123!"
+    },
+    {
+      "email": "test+10rftb@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2e9szyp56c",
+      "email": "e2e+9szyp56c@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eimb2xztf",
+      "email": "e2e+imb2xztf@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eat9g38xr",
+      "email": "e2e+at9g38xr@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2ehl88k3i1",
+      "email": "e2e+hl88k3i1@example.com",
+      "password": "Password123!"
+    },
+    {
+      "email": "test+e1ay6q@example.com",
+      "password": "Password123!"
+    }
+  ]
+}

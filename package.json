@@ -1,0 +1,21 @@
+{
+  "name": "bank-tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test tests/ui",
+    "test:api": "npx playwright test tests/api",
+    "test:sec": "npx playwright test tests/security",
+    "test:sec:report": "npx playwright test tests/security && npm run allure:generate",
+    "allure:generate": "npx allure generate allure-results --clean -o allure-report",
+    "allure:open": "npx allure open allure-report",
+    "allure:serve": "npx allure serve allure-results"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^24.9.0",
+    "allure-playwright": "^3.4.1",
+    "typescript": "^5.0.0"
+  }
+}

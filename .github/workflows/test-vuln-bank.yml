@@ -555,17 +555,33 @@ jobs:
       
       - name: 🚀 Deploy to GitHub Pages
         if: always()
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          folder: test-repo/allure-report
-          clean: true
-          clean-exclude: |
-            CNAME
-            .nojekyll
-          commit-message: "Deploy Allure Report [skip ci]"
-          target-folder: allure-report
+        run: |
+          echo "📂 Current directory: $(pwd)"
+          echo "📦 Files in test-repo/allure-report:"
+          ls -la test-repo/allure-report/ || echo "No allure-report directory found"
+          
+          # Ensure the target directory exists
+          mkdir -p test-repo/allure-report
+          
+          # Create a simple index.html if it doesn't exist
+          if [ ! -f "test-repo/allure-report/index.html" ]; then
+            echo "📝 Creating index.html..."
+            echo "<h1>Allure Report</h1><p>Report will be available after first successful test run.</p>" > test-repo/allure-report/index.html
+          fi
+          
+          # Deploy using the gh-pages package
+          npm install -g gh-pages
+          
+          # Configure git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Deploy to gh-pages branch
+          cd test-repo
+          npx gh-pages -d allure-report \
+            --repo https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+            --user "GitHub Actions <actions@github.com>" \
+            --message "Deploy Allure Report [skip ci]"
           
       # ==================== SUMMARY ====================
       

@@ -93,44 +93,35 @@ jobs:
           echo "📂 Current directory: $(pwd)"
           echo "📦 Setting up test-repo dependencies..."
           
-          # Clean up any existing node_modules and lock files
-          rm -rf node_modules package-lock.json
-          
           # Initialize npm if package.json doesn't exist
           if [ ! -f "package.json" ]; then
             echo "📝 Creating package.json..."
-            cat > package.json << 'EOL'
-            {
-              "name": "bank-tests",
-              "version": "1.0.0",
-              "private": true,
-              "scripts": {
-                "test": "playwright test",
-                "test:sec": "playwright test tests/security/"
-              },
-              "devDependencies": {
-                "@playwright/test": "^1.40.0",
-                "allure-playwright": "^2.0.0"
-              }
-            }
-            EOL
+            npm init -y
           fi
           
-          # Install Node.js dependencies first
-          echo "📦 Installing Node.js dependencies..."
-          npm install
+          # Install required packages
+          echo "📦 Installing dependencies..."
+          npm install @playwright/test@^1.40.0 allure-playwright@^2.0.0 --save-dev
+          
+          # Verify installation
+          echo "✅ Dependencies installed"
+          echo "📦 package.json:"
+          cat package.json
+          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
           
           # Install Playwright browsers
           echo "🌐 Installing Playwright browsers..."
           npx playwright install --with-deps chromium
           
-          # Verify installations
-          echo "✅ Dependencies installed"
-          echo "📦 package.json:"
-          cat package.json
-          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
-          echo -e "\n📦 Installed packages:"
-          npm list --depth=0
+          # Verify installation
+          echo "✅ Playwright browsers installed"
+          
+          # Set registry to default
+          npm config set registry https://registry.npmjs.org/
+          
+          # Verify npm config
+          echo "📦 npm config list:"
+          npm config list
           
           # Create package.json with required dependencies if it doesn't exist
           if [ ! -f package.json ]; then
@@ -268,44 +259,12 @@ jobs:
         working-directory: ./app-repo
         run: |
           echo "Starting application..."
-          
-          # Build the Docker image if not exists
-          if ! docker image inspect vuln-bank:test >/dev/null 2>&1; then
-            echo "Building Docker image..."
-            docker build -t vuln-bank:test .
-          fi
-          
-          # Start the container
-          echo "Starting container..."
           docker compose up -d
-          
-          # Show container logs
-          echo "Container logs:"
-          docker compose logs --tail=50 || true
-          
-          # Wait for container to be ready
           echo "Waiting for container to initialize..."
-          for i in {1..10}; do
-            if docker compose ps | grep -q "Up"; then
-              echo "Container is up and running!"
-              break
-            fi
-            echo "Waiting for container to start... (attempt $i/10)"
-            sleep 5
-          done
-          
-          # Show container status and logs
+          sleep 10
           echo "Container status:"
           docker compose ps
           docker ps
-          
-          echo "\n📝 Application logs:"
-          docker compose logs --tail=50 || true
-          
-          # Check if the application is responding
-          echo "\n🌐 Checking application health..."
-          curl -v http://localhost:5001/health || echo "Health check failed"
-          curl -v http://localhost:5001/ || echo "Root endpoint check failed"
       
       - name: ⏳ Wait for APP to be Ready
         run: |

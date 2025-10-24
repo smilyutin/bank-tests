@@ -475,32 +475,34 @@ jobs:
           echo "📂 Report directory contents:"
           ls -la "$ALLURE_REPORT_DIR"
       
-      - name: 🚀 Deploy to GitHub Pages
+      - name: 🚀 Prepare GitHub Pages
         if: always()
         run: |
-          # Debug: Show directory structure before deployment
+          # Show current directory structure
           echo "📂 Current directory structure:"
           ls -la
           
-          # Ensure the target directory exists
-          mkdir -p ./test-repo/allure-report
+          # Show contents of ALLURE_REPORT_DIR
+          echo "📦 Contents of $ALLURE_REPORT_DIR:"
+          ls -la "$ALLURE_REPORT_DIR/"
+          
+          # Create target directory if it doesn't exist
+          mkdir -p ./deploy-report
           
           # Copy the report to the target directory
-          echo "📦 Copying report to test-repo/allure-report/"
-          cp -r $ALLURE_REPORT_DIR/* ./test-repo/allure-report/
+          echo "📦 Copying report to deploy-report/"
+          cp -r "$ALLURE_REPORT_DIR/"* ./deploy-report/
           
-          # Debug: Show what's being deployed
-          echo "📦 Contents of test-repo/allure-report/:"
-          ls -la ./test-repo/allure-report/
-          
-          # Deploy to GitHub Pages
-          echo "🚀 Deploying to GitHub Pages..."
-        
+          # Show what's being deployed
+          echo "📦 Contents of deploy-report/:"
+          ls -la ./deploy-report/
+      
       - name: Deploy to GitHub Pages
+        if: always()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./test-repo/allure-report
+          publish_dir: ./deploy-report
           keep_files: true
           cname: ${{ github.repository_owner }}.github.io
           commit_message: 'Deploy Allure Report [skip ci]'

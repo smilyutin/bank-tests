@@ -467,27 +467,28 @@ jobs:
           fi
           
           # Ensure the report is accessible from the root of the site
-          echo "📝 Creating CNAME file..."
+          echo "📝 Creating .nojekyll and CNAME files..."
+          touch "$ALLURE_REPORT_DIR/.nojekyll"
           echo "${{ github.repository_owner }}.github.io" > "$ALLURE_REPORT_DIR/CNAME"
           
           echo "✅ Report generated at: $ALLURE_REPORT_DIR"
           echo "📂 Report directory contents:"
           ls -la "$ALLURE_REPORT_DIR"
       
-      - name: 🚀 Deploy Allure Report to GitHub Pages
+      - name: 🚀 Deploy to GitHub Pages
         if: always()
-        run: |
-          echo "🚀 Deploying Allure Report to GitHub Pages..."
-          
-          # Configure git
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          
-          # Deploy using gh-pages
-          cd test-repo
-          npx gh-pages -d allure-report \
-            --repo https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git \
-            --user "GitHub Actions <actions@github.com>" \
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: test-repo/allure-report
+          branch: gh-pages
+          clean: true
+          clean-exclude: |
+            .nojekyll
+            CNAME
+          repository-name: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          single-commit: true
+          commit-message: "Deploy Allure Report [skip ci]"
             --message "Deploy Allure Report [skip ci]" \
             --no-history
           

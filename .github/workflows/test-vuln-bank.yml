@@ -477,6 +477,26 @@ jobs:
       
       - name: 🚀 Deploy to GitHub Pages
         if: always()
+        run: |
+          # Debug: Show directory structure before deployment
+          echo "📂 Current directory structure:"
+          ls -la
+          
+          # Ensure the target directory exists
+          mkdir -p ./test-repo/allure-report
+          
+          # Copy the report to the target directory
+          echo "📦 Copying report to test-repo/allure-report/"
+          cp -r $ALLURE_REPORT_DIR/* ./test-repo/allure-report/
+          
+          # Debug: Show what's being deployed
+          echo "📦 Contents of test-repo/allure-report/:"
+          ls -la ./test-repo/allure-report/
+          
+          # Deploy to GitHub Pages
+          echo "🚀 Deploying to GitHub Pages..."
+        
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

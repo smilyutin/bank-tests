@@ -73,6 +73,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'test-repo/package-lock.json'
           
       - name: 📦 Install Allure CLI
         run: |
@@ -89,13 +91,30 @@ jobs:
         working-directory: ./test-repo
         run: |
           echo "📂 Current directory: $(pwd)"
-          echo "📦 Installing test-repo dependencies..."
+          echo "📦 Setting up test-repo dependencies..."
           
-          # Set npm cache directory
-          npm config set cache '~/.npm'
+          # Initialize npm if package.json doesn't exist
+          if [ ! -f "package.json" ]; then
+            echo "📝 Creating package.json..."
+            npm init -y
+          fi
           
-          # Clean npm cache
-          npm cache clean --force
+          # Install required packages
+          echo "📦 Installing dependencies..."
+          npm install @playwright/test@^1.40.0 allure-playwright@^2.0.0 --save-dev
+          
+          # Verify installation
+          echo "✅ Dependencies installed"
+          echo "📦 package.json:"
+          cat package.json
+          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
+          
+          # Install Playwright browsers
+          echo "🌐 Installing Playwright browsers..."
+          npx playwright install --with-deps chromium
+          
+          # Verify installation
+          echo "✅ Playwright browsers installed"
           
           # Set registry to default
           npm config set registry https://registry.npmjs.org/

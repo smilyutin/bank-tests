@@ -77,47 +77,54 @@ jobs:
           
       - name: 📦 Install Allure CLI
         run: |
-          # Install Allure globally
-          npm install -g allure-commandline
-          # Add Allure to PATH
-          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+          # Install Allure using the official Debian package
+          echo "Installing Allure CLI..."
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
+          sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
           # Verify installation
-          which allure || echo "Allure not found in PATH"
-          allure --version || echo "Failed to get Allure version"
+          echo "Allure version: $(allure --version || echo 'Allure not found')"
       
       - name: 📦 Install Test Dependencies
-        working-directory: ./test-repo
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in directory:"
-          ls -la
+          echo "📂 Current directory: $(pwd)"
+          echo "📦 Installing test-repo dependencies..."
           
-          # Create package.json if it doesn't exist
+          # Go to test-repo directory
+          cd test-repo
+          echo "📂 Now in: $(pwd)"
+          
+          # Create package.json with required dependencies if it doesn't exist
           if [ ! -f package.json ]; then
-            echo '{"name":"bank-tests","version":"1.0.0"}' > package.json
+            echo "📝 Creating package.json..."
+            cat > package.json << 'EOL'
+            {
+              "name": "bank-tests",
+              "version": "1.0.0",
+              "private": true,
+              "dependencies": {
+                "@playwright/test": "^1.40.0",
+                "allure-playwright": "^2.0.0"
+              }
+            }
+            EOL
           fi
           
-          # Install dependencies and create lock file
-          npm install --no-package-lock
-          npm install --package-lock-only
+          # Install dependencies
+          echo "🔧 Installing dependencies..."
+          npm install
           
-          # Verify lock file was created
-          if [ -f package-lock.json ]; then
-            echo "✅ package-lock.json created successfully"
-          else
-            echo "❌ Failed to create package-lock.json"
-            exit 1
-          fi
+          # Verify installation
+          echo "✅ Dependencies installed"
+          echo "📦 package.json:"
+          cat package.json
+          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
           
-          # Install dependencies using the lock file
-          npm ci
-      
-      - name: 🎭 Install Playwright Browsers
-        working-directory: ./test-repo
-        run: npx playwright install --with-deps chromium
-      
-      # ==================== CLONE & BUILD APP ====================
-      
+          # Install Playwright browsers
+          echo "🌐 Installing Playwright browsers..."
+          npx playwright install --with-deps chromium
+
       - name: 📥 Clone APP Repo
         uses: actions/checkout@v4
         with:
@@ -364,10 +371,9 @@ jobs:
           echo "Generated test results in $ALLURE_RESULTS_DIR:"
           find $ALLURE_RESULTS_DIR -type f || echo "No test results found"
           
-          # Generate Allure report using the globally installed allure
-          echo "📊 Generating Allure report..."
-          allure generate $ALLURE_RESULTS_DIR --clean -o allure-report || \
-            { echo "⚠️ Failed to generate Allure report"; ls -la $ALLURE_RESULTS_DIR; exit 1; }
+          # Just collect test results, we'll generate the report in a dedicated step
+          echo "📊 Test results collected in: $ALLURE_RESULTS_DIR"
+          ls -la $ALLURE_RESULTS_DIR/ || echo "No test results found"
             
           # Verify report was generated
           echo "Generated report files:"
@@ -412,23 +418,15 @@ jobs:
             echo "⚠️  No test results found. Created empty result to prevent Allure errors."
           fi
           
-          # Install Allure commandline
-          echo "Installing Allure commandline..."
-          sudo apt-get update
-          sudo apt-get install -y default-jre
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
-          sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
-          
-          # Set up Allure environment
-          export PATH="/usr/share/allure/bin:$PATH"
-          echo "Allure version: $(allure --version || echo 'Allure not found')"
-          
-          # Generate Allure report
+          # Generate the report
           echo "Generating Allure report from: $ALLURE_RESULTS_DIR"
-          ls -la "$ALLURE_RESULTS_DIR" || echo "Could not list results directory"
+          ls -la "$ALLURE_RESULTS_DIR/" || echo "Could not list results directory"
           
           # Generate the report
+          echo "Current directory: $(pwd)"
           mkdir -p ./allure-report
+          
+          # Generate the report using the globally installed Allure
           allure generate "$ALLURE_RESULTS_DIR" --clean -o ./allure-report
           
           # Verify report was generated
@@ -437,8 +435,6 @@ jobs:
             ls -la allure-report/
           else
             echo "❌ Failed to generate Allure report"
-            echo "Current directory: $(pwd)"
-            ls -la
             exit 1
           fi
       
@@ -512,80 +508,9 @@ jobs:
           echo "=== Disk Usage ==="
           docker system df
       
-      # ==================== ALLURE REPORT ====================
-      
-      - name: 📂 Prepare Allure Results
-        if: always()
-        working-directory: ./test-repo
-        run: |
-          # Create allure-results directory if it doesn't exist
-          mkdir -p allure-results
-          
-          # If no test results, create an empty result to prevent Allure errors
-          if [ -z "$(ls -A allure-results/)" ]; then
-            echo '{"name": "No test results found", "status": "broken", "start": 0, "stop": 0}' > allure-results/no-results-found.json
-            echo "⚠️  No test results found. Created empty result to prevent Allure errors."
-          fi
-          
-          # Debug: Show directory contents
-          echo "=== Test Results Directory ==="
-          ls -la
-          echo ""
-          
-          # Debug: Show what's in the allure-results directory
-          echo "=== Allure Results ==="
-          if [ -d "allure-results" ]; then
-            find allure-results -type f | head -n 10
-            echo ""
-            echo "Total files in allure-results: $(find allure-results -type f | wc -l)"
-          else
-            echo "No allure-results directory found!"
-            # Create empty directory to prevent errors
-            mkdir -p allure-results
-          fi
-          
-      - name: 📦 Install Allure Commandline
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
-          sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
-          
-      - name: 📊 Generate Allure Report
-        working-directory: ./test-repo
-        run: |
-          # Generate Allure report
-          allure generate allure-results --clean -o allure-report
-          
-          # Create a simple index.html for GitHub Pages
-          mkdir -p ./allure-report
-          cat > ./allure-report/index.html << 'EOL'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Allure Report</title>
-              <meta http-equiv="refresh" content="0; url=./allure-report/index.html" />
-          </head>
-          <body>
-              <p>Redirecting to <a href="./allure-report/index.html">Allure Report</a>...</p>
-          </body>
-          </html>
-          EOL
-          
-          # List files for debugging
-          echo "Files in allure-report directory:"
-          find ./allure-report -type f
-      
       # ==================== DEPLOY TO GITHUB PAGES ====================
       
       - name: 🚀 Deploy to GitHub Pages
-        if: always()
-        run: |
-          cd test-repo
-          ls -la
-          ls -la allure-report || echo "No allure-report directory found"
-        
-      - name: Deploy to GitHub Pages
         if: always()
         uses: JamesIves/github-pages-deploy-action@v4
         with:
@@ -596,8 +521,8 @@ jobs:
           clean-exclude: |
             CNAME
             .nojekyll
-          commit-message: "Deploy Allure Report"
-          target-folder: .
+          commit-message: "Deploy Allure Report [skip ci]"
+          target-folder: allure-report
           
       # ==================== SUMMARY ====================
       

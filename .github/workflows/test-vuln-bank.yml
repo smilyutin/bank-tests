@@ -477,22 +477,13 @@ jobs:
       
       - name: 🚀 Deploy to GitHub Pages
         if: always()
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          folder: test-repo/allure-report
-          branch: gh-pages
-          clean: true
-          clean-exclude: |
-            .nojekyll
-            CNAME
-          repository-name: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          single-commit: true
-          commit-message: "Deploy Allure Report [skip ci]"
-            --message "Deploy Allure Report [skip ci]" \
-            --no-history
-          
-          echo "✅ Report deployed to GitHub Pages"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./test-repo/allure-report
+          keep_files: true
+          cname: ${{ github.repository_owner }}.github.io
+          commit_message: 'Deploy Allure Report [skip ci]'
       
       - name: 💬 Add Report URL to PR
         if: github.event_name == 'pull_request' && always()
@@ -500,7 +491,7 @@ jobs:
         with:
           script: |
             const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo.split('/')[1]}/allure-report/`
-            await github.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,

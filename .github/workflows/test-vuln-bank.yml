@@ -51,6 +51,8 @@ env:
   TEST_SUITE: ${{ inputs.test_suite || 'all' }}
   BASE_URL: 'http://localhost:5001'
   NODE_VERSION: '20'
+  ALLURE_RESULTS_DIR: ${{ github.workspace }}/test-repo/allure-results
+  ALLURE_REPORT_DIR: ${{ github.workspace }}/test-repo/allure-report
 
 jobs:
   test-application:
@@ -60,6 +62,7 @@ jobs:
       contents: write  # For pushing to the repository
       pages: write    # For GitHub Pages deployment
       id-token: write # For GitHub OIDC token
+      pull-requests: write # For adding comments to PRs
     
     steps:
       # ==================== SETUP TEST REPO ====================
@@ -376,7 +379,7 @@ jobs:
         env:
           BASE_URL: ${{ env.BASE_URL }}
           SECURITY_SOFT: ${{ env.SOFT_MODE }}
-          ALLURE_RESULTS_DIR: ${{ github.workspace }}/test-repo/allure-results
+          ALLURE_RESULTS_DIR: ${{ env.ALLURE_RESULTS_DIR }}
         run: |
           echo "================================================"
           echo "🎯 Test Configuration"
@@ -387,21 +390,17 @@ jobs:
           echo "APP branch:    $APP_BRANCH"
           echo "Allure Results: $ALLURE_RESULTS_DIR"
           echo "================================================"
-          echo ""
           
           # Create test results directory
           mkdir -p $ALLURE_RESULTS_DIR
           
           # Run tests with Allure reporting
           EXIT_CODE=0
-          echo "🔒 Running Security tests with Allure reporting..."
+          echo "🔒 Running $TEST_SUITE tests with Allure reporting..."
           
-          # Create directories if they don't exist
-          mkdir -p $ALLURE_RESULTS_DIR
-          
-          # Run security tests with Allure reporting and timeout
-          echo "🚀 Starting security tests..."
-          timeout 15m npx playwright test tests/security/ \
+          # Run tests with Allure reporting and timeout
+          echo "🚀 Starting tests..."
+          timeout 15m npx playwright test tests/$TEST_SUITE/ \
             --reporter=line,allure-playwright \
             --output=$ALLURE_RESULTS_DIR \
             --workers=2 \
@@ -409,39 +408,24 @@ jobs:
             
           if [ $EXIT_CODE -eq 124 ]; then
             echo "⚠️ Tests timed out after 15 minutes"
-            # Generate report with whatever results we have
-            EXIT_CODE=0
+            EXIT_CODE=0  # Don't fail the build on timeout
           fi
             
           # List generated test results
-          echo "Generated test results in $ALLURE_RESULTS_DIR:"
-          find $ALLURE_RESULTS_DIR -type f || echo "No test results found"
-          
-          # Just collect test results, we'll generate the report in a dedicated step
           echo "📊 Test results collected in: $ALLURE_RESULTS_DIR"
-          ls -la $ALLURE_RESULTS_DIR/ || echo "No test results found"
-            
-          # Verify report was generated
-          echo "Generated report files:"
-          find ./allure-report -type f | head -20 || echo "No report files found"
+          find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
           
-          # List generated test results
-          echo "Generated test results:"
-          find $ALLURE_RESULTS_DIR -type f | xargs ls -la || true
-          
-          echo ""
-          echo "================================================"
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ Tests completed successfully"
-          else
+          # Set status based on test results and SOFT_MODE
+          if [ $EXIT_CODE -ne 0 ]; then
             if [ "$SECURITY_SOFT" = "true" ]; then
               echo "⚠️  Tests found issues (SOFT mode - not failing build)"
               EXIT_CODE=0
             else
               echo "❌ Tests failed (HARD mode - failing build)"
             fi
+          else
+            echo "✅ Tests completed successfully"
           fi
-          echo "================================================"
           
           exit $EXIT_CODE
       
@@ -451,62 +435,75 @@ jobs:
         if: always()
         working-directory: ./test-repo
         env:
-          ALLURE_RESULTS_DIR: ${{ github.workspace }}/test-repo/allure-results
+          ALLURE_RESULTS_DIR: ${{ env.ALLURE_RESULTS_DIR }}
+          ALLURE_REPORT_DIR: ${{ env.ALLURE_REPORT_DIR }}
         run: |
           echo "=== Generating Allure Report ==="
           
-          # Ensure results directory exists
-          mkdir -p $ALLURE_RESULTS_DIR
+          # Ensure directories exist
+          mkdir -p "$ALLURE_RESULTS_DIR" "$ALLURE_REPORT_DIR"
           
-          # Check if we have any test results
-          if [ -z "$(ls -A $ALLURE_RESULTS_DIR/ 2>/dev/null)" ]; then
-            echo '{"name": "No test results found", "status": "broken", "start": 0, "stop": 0}' > "$ALLURE_RESULTS_DIR/no-results-found.json"
-            echo "⚠️  No test results found. Created empty result to prevent Allure errors."
+          # Create a placeholder if no results found
+          if [ -z "$(ls -A "$ALLURE_RESULTS_DIR/" 2>/dev/null)" ]; then
+            echo '{"name": "No test results found", "status": "broken"}' > "$ALLURE_RESULTS_DIR/no-results.json"
+            echo "⚠️  No test results found. Using placeholder."
           fi
           
           # Generate the report
-          echo "Generating Allure report from: $ALLURE_RESULTS_DIR"
-          ls -la "$ALLURE_RESULTS_DIR/" || echo "Could not list results directory"
+          echo "📊 Generating report from: $ALLURE_RESULTS_DIR"
+          allure generate "$ALLURE_RESULTS_DIR" --clean -o "$ALLURE_REPORT_DIR"
           
-          # Generate the report
-          echo "Current directory: $(pwd)"
-          mkdir -p ./allure-report
-          
-          # Generate the report using the globally installed Allure
-          allure generate "$ALLURE_RESULTS_DIR" --clean -o ./allure-report
-          
-          # Verify report was generated
-          if [ -d "allure-report" ]; then
-            echo "✅ Allure report generated successfully"
-            ls -la allure-report/
-          else
-            echo "❌ Failed to generate Allure report"
-            exit 1
+          # Create a simple index if no report was generated
+          if [ ! -f "$ALLURE_REPORT_DIR/index.html" ]; then
+            echo "📝 Creating placeholder index.html..."
+            echo "<h1>Allure Report</h1><p>No test results found. Check the test run for details.</p>" > "$ALLURE_REPORT_DIR/index.html"
           fi
-      
-      - name: 📤 Upload Allure Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report-${{ github.run_number }}
-          path: test-repo/allure-report/
-          retention-days: 30
           
-      - name: 📤 Upload Playwright HTML Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ github.run_number }}
-          path: test-repo/playwright-report/
-          retention-days: 30
+          echo "✅ Report generated at: $ALLURE_REPORT_DIR"
       
-      - name: 📤 Upload Test Results
+      - name: 🚀 Deploy Allure Report to GitHub Pages
+        if: always()
+        run: |
+          echo "🚀 Deploying Allure Report to GitHub Pages..."
+          
+          # Configure git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Deploy using gh-pages
+          cd test-repo
+          npx gh-pages -d allure-report \
+            --repo https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git \
+            --user "GitHub Actions <actions@github.com>" \
+            --message "Deploy Allure Report [skip ci]" \
+            --no-history
+          
+          echo "✅ Report deployed to GitHub Pages"
+      
+      - name: 💬 Add Report URL to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo.split('/')[1]}/allure-report/`
+            await github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `📊 [View Allure Report](${reportUrl})`
+            })
+      
+      - name: 📦 Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ github.run_number }}
-          path: test-repo/test-results/
-          retention-days: 30
+          name: test-artifacts-${{ github.run_number }}
+          path: |
+            test-repo/allure-results
+            test-repo/allure-report
+            test-repo/playwright-report
+            test-repo/test-results
+          retention-days: 7
       
       # ==================== COLLECT LOGS ====================
       
@@ -554,6 +551,42 @@ jobs:
           echo "=== Disk Usage ==="
           docker system df
       
+      # ==================== SUMMARY ====================
+      
+      - name: 📝 Test Summary
+        if: always()
+        run: |
+          echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| APP Repo | \`${{ env.APP_REPO }}@${{ env.APP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SOFT Mode | \`${{ env.SOFT_MODE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Add report URL
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/"
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Allure Report]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          
+          # Add test results summary if available
+          if [ -d "test-repo/allure-results" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 Test Statistics" >> $GITHUB_STEP_SUMMARY
+            
+            # Count test results
+            TOTAL_TESTS=$(find test-repo/allure-results -name "*.json" | wc -l)
+            PASSED_TESTS=$(grep -r "status\":\"passed\"" test-repo/allure-results | wc -l || echo 0)
+            FAILED_TESTS=$(grep -r "status\":\"failed\"" test-repo/allure-results | wc -l || echo 0)
+            
+            echo "- ✅ Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Total: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
       # ==================== DEPLOY TO GITHUB PAGES ====================
       
       - name: 🚀 Deploy to GitHub Pages

@@ -425,12 +425,69 @@ jobs:
       
       # ==================== ALLURE REPORT ====================
       
+      - name: 📂 Prepare Allure Results
+        if: always()
+        working-directory: ./test-repo
+        run: |
+          # Create allure-results directory if it doesn't exist
+          mkdir -p allure-results
+          
+          # If no test results, create an empty result to prevent Allure errors
+          if [ -z "$(ls -A allure-results/)" ]; then
+            echo '{"name": "No test results found", "status": "broken", "start": 0, "stop": 0}' > allure-results/no-results-found.json
+            echo "⚠️  No test results found. Created empty result to prevent Allure errors."
+          fi
+          
+          # Debug: Show directory contents
+          echo "=== Test Results Directory ==="
+          ls -la
+          echo ""
+          
+          # Debug: Show what's in the allure-results directory
+          echo "=== Allure Results ==="
+          if [ -d "allure-results" ]; then
+            find allure-results -type f | head -n 10
+            echo ""
+            echo "Total files in allure-results: $(find allure-results -type f | wc -l)"
+          else
+            echo "No allure-results directory found!"
+            # Create empty directory to prevent errors
+            mkdir -p allure-results
+          fi
+          
+      - name: 📥 Install Allure
+        if: always()
+        run: |
+          # Install Allure command-line tool
+          echo "Installing Allure CLI..."
+          curl -o allure-2.24.0.tgz -sL https://github.com/allure-framework/allure2/releases/download/2.24.0/allure-2.24.0.tgz
+          mkdir -p allure-2.24.0
+          tar -zxvf allure-2.24.0.tgz -C allure-2.24.0 --strip-components=1
+          echo "$(pwd)/allure-2.24.0/bin" >> $GITHUB_PATH
+          echo "Allure CLI installed at: $(pwd)/allure-2.24.0/bin"
+          echo "PATH: $PATH"
+          which allure || echo "Allure not in PATH"
+          
       - name: 📊 Generate Allure Report
         if: always()
         working-directory: ./test-repo
         run: |
-          # Generate Allure report
-          npx allure generate allure-results --clean -o allure-report
+          echo "=== Current Directory ==="
+          pwd
+          ls -la
+          
+          echo "\n=== Allure Results ==="
+          find allure-results -type f | head -n 10 || echo "No test results found"
+          
+          echo "\n=== Generate Allure Report ==="
+          # Make sure we have the latest PATH
+          export PATH="$PATH:$(pwd)/allure-2.24.0/bin"
+          
+          # Debug: Show Allure version and help
+          allure --version || echo "Allure not found in PATH"
+          
+          # Generate report with full path to prevent any PATH issues
+          $(pwd)/allure-2.24.0/bin/allure generate allure-results --clean -o allure-report
           
           # Create a simple index.html for GitHub Pages
           echo '<!DOCTYPE html>

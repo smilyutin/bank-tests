@@ -484,9 +484,13 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gh-pages'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: test-repo/allure-report
-          branch: gh-pages
-          clean: true
+          report-dir: ./test-repo/allure-results
+          report-version: 2.24.0
+          gh-pages: true
+          gh-pages-branch: gh-pages
+          gh-pages-folder: allure-report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           clean-exclude: |
             .nojekyll
             CNAME

@@ -1,0 +1,380 @@
+name: Test Vulnerable Bank Application
+
+on:
+  # Run on push to test repo
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tests/**'
+      - 'playwright.config.ts'
+      - '.github/workflows/**'
+  
+  # Run on PRs to test repo
+  pull_request:
+    branches: [main]
+  
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      app_branch:
+        description: 'APP branch to test'
+        required: false
+        default: 'main'
+        type: string
+      soft_mode:
+        description: 'Run in SOFT mode (warnings vs failures)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      test_suite:
+        description: 'Which tests to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'api'
+          - 'security'
+          - 'ui'
+  
+  # Scheduled runs (nightly at 2 AM UTC)
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  APP_REPO: 'smilyutin/vuln_bank'
+  APP_BRANCH: ${{ inputs.app_branch || 'main' }}
+  SOFT_MODE: ${{ inputs.soft_mode || 'true' }}
+  TEST_SUITE: ${{ inputs.test_suite || 'all' }}
+  BASE_URL: 'http://localhost:5001'
+  NODE_VERSION: '20'
+
+jobs:
+  test-application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      # ==================== SETUP TEST REPO ====================
+      
+      - name: 📥 Checkout Test Repo
+        uses: actions/checkout@v4
+        with:
+          path: test-repo
+      
+      - name: 🔧 Setup Node.js for Tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: test-repo/package-lock.json
+      
+      - name: 📦 Install Test Dependencies
+        working-directory: ./test-repo
+        run: npm ci
+      
+      - name: 🎭 Install Playwright Browsers
+        working-directory: ./test-repo
+        run: npx playwright install --with-deps chromium
+      
+      # ==================== CLONE & BUILD APP ====================
+      
+      - name: 📥 Clone APP Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.APP_REPO }}
+          ref: ${{ env.APP_BRANCH }}
+          path: app-repo
+          # Use GITHUB_TOKEN (has access to public repos by default)
+          # For private repos, add a PAT as APP_REPO_TOKEN secret
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🔧 Setup Node.js for APP
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: 📦 Install APP Dependencies
+        working-directory: ./app-repo
+        run: |
+          echo "Installing dependencies..."
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+      
+      - name: 🐳 Setup Docker Configuration
+        working-directory: ./app-repo
+        run: |
+          # Check if docker-compose.yml exists
+          if [ ! -f "docker-compose.yml" ]; then
+            echo "⚠️  No docker-compose.yml found, creating one..."
+            cat > docker-compose.yml << 'EOF'
+          version: '3.8'
+          services:
+            app:
+              build: .
+              ports:
+                - "5001:5001"
+              environment:
+                - NODE_ENV=test
+                - PORT=5001
+              healthcheck:
+                test: ["CMD-SHELL", "curl -f http://localhost:5001/health || curl -f http://localhost:5001/ || exit 1"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+                start_period: 30s
+          EOF
+          else
+            echo "✅ Found existing docker-compose.yml"
+          fi
+          
+          # Check if Dockerfile exists
+          if [ ! -f "Dockerfile" ]; then
+            echo "⚠️  No Dockerfile found, creating one..."
+            cat > Dockerfile << 'EOF'
+          FROM node:20-alpine
+          WORKDIR /app
+          COPY package*.json ./
+          RUN npm ci --only=production || npm install --production
+          COPY . .
+          EXPOSE 5001
+          HEALTHCHECK --interval=10s --timeout=5s --start-period=30s \
+            CMD wget --no-verbose --tries=1 --spider http://localhost:5001/health || exit 1
+          CMD ["npm", "start"]
+          EOF
+          else
+            echo "✅ Found existing Dockerfile"
+          fi
+          
+          echo "=== Docker Configuration ==="
+          echo "Dockerfile:"
+          cat Dockerfile
+          echo ""
+          echo "docker-compose.yml:"
+          cat docker-compose.yml
+      
+      - name: 🔨 Build APP Docker Image
+        working-directory: ./app-repo
+        run: |
+          echo "Building Docker image..."
+          docker build -t vuln-bank:test .
+          echo "✅ Image built successfully"
+          docker images | grep vuln-bank
+      
+      # ==================== START APP ====================
+      
+      - name: 🚀 Start APP Container
+        working-directory: ./app-repo
+        run: |
+          echo "Starting application..."
+          docker-compose up -d
+          echo "Waiting for container to initialize..."
+          sleep 10
+          echo "Container status:"
+          docker-compose ps
+          docker ps
+      
+      - name: ⏳ Wait for APP to be Ready
+        run: |
+          echo "Waiting for application to respond..."
+          timeout 120 bash -c '
+            until curl -f http://localhost:5001/health 2>/dev/null || curl -f http://localhost:5001/ 2>/dev/null; do 
+              echo "⏳ Waiting for app... ($(date +%T))"
+              docker ps
+              sleep 3
+            done
+          '
+          echo "✅ Application is ready!"
+      
+      - name: 🔍 Verify APP Endpoints
+        run: |
+          echo "=== Testing Endpoints ==="
+          echo "Main endpoint:"
+          curl -v http://localhost:5001/ 2>&1 | head -20 || echo "❌ Failed"
+          
+          echo ""
+          echo "Health endpoint:"
+          curl -v http://localhost:5001/health 2>&1 || echo "⚠️  No health endpoint"
+          
+          echo ""
+          echo "API endpoint:"
+          curl -v http://localhost:5001/api/ 2>&1 || echo "⚠️  No API endpoint"
+      
+      - name: 📋 Show APP Startup Logs
+        if: always()
+        working-directory: ./app-repo
+        run: |
+          echo "=== Application Logs (last 100 lines) ==="
+          docker-compose logs --tail=100
+      
+      # ==================== RUN TESTS ====================
+      
+      - name: 🧪 Run Tests
+        working-directory: ./test-repo
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          SECURITY_SOFT: ${{ env.SOFT_MODE }}
+        run: |
+          echo "================================================"
+          echo "🎯 Test Configuration"
+          echo "================================================"
+          echo "Target URL:    $BASE_URL"
+          echo "SOFT mode:     $SECURITY_SOFT"
+          echo "Test suite:    $TEST_SUITE"
+          echo "APP branch:    $APP_BRANCH"
+          echo "================================================"
+          echo ""
+          
+          # Run tests based on selection
+          EXIT_CODE=0
+          
+          case "$TEST_SUITE" in
+            api)
+              echo "🔵 Running API tests..."
+              npm run test:api || EXIT_CODE=$?
+              ;;
+            security)
+              echo "🔒 Running Security tests..."
+              npm run test:sec || EXIT_CODE=$?
+              ;;
+            ui)
+              echo "🖥️  Running UI tests..."
+              npm run test:ui || EXIT_CODE=$?
+              ;;
+            *)
+              echo "🎯 Running all test suites..."
+              echo ""
+              echo "1️⃣  API Tests"
+              npm run test:api || EXIT_CODE=$?
+              echo ""
+              echo "2️⃣  Security Tests"
+              npm run test:sec || EXIT_CODE=$?
+              echo ""
+              echo "3️⃣  UI Tests"
+              npm run test:ui || EXIT_CODE=$?
+              ;;
+          esac
+          
+          echo ""
+          echo "================================================"
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Tests completed successfully"
+          else
+            if [ "$SECURITY_SOFT" = "true" ]; then
+              echo "⚠️  Tests found issues (SOFT mode - not failing build)"
+              EXIT_CODE=0
+            else
+              echo "❌ Tests failed (HARD mode - failing build)"
+            fi
+          fi
+          echo "================================================"
+          
+          exit $EXIT_CODE
+      
+      # ==================== GENERATE REPORTS ====================
+      
+      - name: 📊 Generate Allure Report
+        if: always()
+        working-directory: ./test-repo
+        run: |
+          echo "Generating Allure report..."
+          npm run allure:generate || echo "⚠️  Allure generation skipped (not configured)"
+      
+      - name: 📤 Upload Playwright HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: test-repo/playwright-report/
+          retention-days: 30
+      
+      - name: 📤 Upload Allure Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_number }}
+          path: test-repo/allure-report/
+          retention-days: 30
+      
+      - name: 📤 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_number }}
+          path: test-repo/test-results/
+          retention-days: 30
+      
+      # ==================== COLLECT LOGS ====================
+      
+      - name: 📋 Collect APP Logs
+        if: always()
+        working-directory: ./app-repo
+        run: |
+          mkdir -p ../app-logs
+          echo "Collecting docker-compose logs..."
+          docker-compose logs > ../app-logs/docker-compose.log 2>&1
+          echo "Collecting container logs..."
+          docker logs $(docker-compose ps -q app) > ../app-logs/app-container.log 2>&1 || true
+          echo "Collecting system info..."
+          docker ps > ../app-logs/docker-ps.log 2>&1
+          docker images > ../app-logs/docker-images.log 2>&1
+      
+      - name: 📤 Upload APP Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-logs-${{ github.run_number }}
+          path: app-logs/
+          retention-days: 30
+      
+      # ==================== CLEANUP ====================
+      
+      - name: 🧹 Stop and Remove Containers
+        if: always()
+        working-directory: ./app-repo
+        run: |
+          echo "Stopping containers..."
+          docker-compose down -v --remove-orphans
+          echo "Cleaning up Docker resources..."
+          docker system prune -f
+      
+      - name: ✅ Verify Cleanup
+        if: always()
+        run: |
+          echo "=== Remaining Containers ==="
+          docker ps -a
+          echo ""
+          echo "=== Remaining Volumes ==="
+          docker volume ls
+          echo ""
+          echo "=== Disk Usage ==="
+          docker system df
+      
+      # ==================== SUMMARY ====================
+      
+      - name: 📝 Test Summary
+        if: always()
+        run: |
+          echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| APP Repo | \`${{ env.APP_REPO }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| APP Branch | \`${{ env.APP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | \`${{ env.TEST_SUITE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SOFT Mode | \`${{ env.SOFT_MODE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Playwright HTML Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Allure Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Results JSON" >> $GITHUB_STEP_SUMMARY
+          echo "- Application Logs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts from the workflow run page." >> $GITHUB_STEP_SUMMARY

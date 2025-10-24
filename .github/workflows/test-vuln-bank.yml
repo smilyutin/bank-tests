@@ -90,13 +90,13 @@ jobs:
           # Verify installation
           echo "Allure version: $(allure --version || echo 'Allure not found')"
       
-      - name: 🛠 Install System Dependencies
+      - name: Install System Dependencies
         run: |
-          echo "🔄 Updating package lists..."
+          echo "Updating package lists..."
           sudo apt-get update -qq
           
-          echo "📦 Installing required system dependencies..."
-          # Install base dependencies
+          echo "Installing required system dependencies for Ubuntu 24.04..."
+          # Install all required system dependencies in a single command
           sudo apt-get install -y --no-install-recommends \
             libasound2t64 \
             libatk-bridge2.0-0 \
@@ -119,26 +119,49 @@ jobs:
             libxrandr2 \
             xvfb \
             x11-utils \
+            x11-xserver-utils \
+            libxtst6 \
+            libasound2 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdbus-1-3 \
+            libdrm2 \
+            libgbm1 \
+            libgtk-3-0 \
+            libnspr4 \
+            libnss3 \
+            libx11-6 \
+            libxcb1 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxext6 \
+            libxfixes3 \
+            libxkbcommon0 \
+            libxrandr2 \
+            xvfb \
+            x11-utils \
             x11-xserver-utils
           
           # Install Playwright system dependencies
-          echo "🔧 Installing Playwright system dependencies..."
+          echo "Installing Playwright system dependencies..."
+          npx playwright install --with-deps chromium
           npx playwright install-deps
           
-          echo "✅ System dependencies installed"
+          echo "System dependencies installed successfully"
       
-      - name: 📦 Install Test Dependencies
+      - name: Install Test Dependencies
         working-directory: ./test-repo
         run: |
-          echo "📂 Current directory: $(pwd)"
-          echo "📦 Setting up test-repo dependencies..."
+          echo "Current directory: $(pwd)"
+          echo "Setting up test-repo dependencies..."
           
           # Clean up previous installations
-          echo "🧹 Cleaning up previous installations..."
+          echo "Cleaning up previous installations..."
           rm -rf node_modules package-lock.json
           
           # Create a fresh package.json
-          echo "📝 Creating package.json..."
+          echo "Creating package.json..."
           cat > package.json << 'EOL'
           {
             "name": "bank-tests",
@@ -155,26 +178,25 @@ jobs:
           EOL
           
           # Set npm registry and clean cache
-          echo "⚙️ Configuring npm..."
+          echo "Configuring npm..."
           npm config set registry https://registry.npmjs.org/
           npm cache clean --force
           
           # Install dependencies
-          echo "📦 Installing dependencies..."
+          echo "Installing dependencies..."
           npm install --no-audit --no-fund --prefer-offline
           
           # Verify installation
-          echo "✅ Dependencies installed"
-          echo "📦 Installed packages:"
+          echo "Dependencies installed"
+          echo "Installed packages:"
           npm list --depth=0
           
-          # Install Playwright browsers without system dependencies (already installed)
-          echo "🌐 Installing Playwright browsers..."
-          npx playwright install --with-deps chromium
-          npx playwright install-deps
+          # Install Playwright browsers (skip system dependencies as they're already installed)
+          echo "Installing Playwright browsers..."
+          npx playwright install chromium
           npx playwright --version
 
-      - name: 📥 Clone APP Repo
+      - name: Clone APP Repo
         uses: actions/checkout@v4
         with:
           repository: ${{ env.APP_REPO }}

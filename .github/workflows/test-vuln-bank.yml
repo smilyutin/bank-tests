@@ -525,16 +525,16 @@ jobs:
       
       - name: 🚀 Deploy Allure Report to GitHub Pages
         if: always()
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          folder: test-repo/allure-report
-          clean: true
-          clean-exclude: |
-            .nojekyll
-            CNAME
-          commit-message: 'Deploy Allure Report for ${{ github.sha }}'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./test-repo/allure-report
+          destination_dir: ./allure-report
+          keep_files: true
+          force_orphan: true
+          user_name: 'GitHub Actions'
+          user_email: 'actions@github.com'
+          commit_message: 'Deploy Allure Report for ${{ github.sha }}'
           
       # ==================== SUMMARY ====================
       

@@ -74,6 +74,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: 'test-repo/package-lock.json'
           
       - name: 📦 Install Allure CLI
         run: |
@@ -111,9 +112,16 @@ jobs:
             EOL
           fi
           
-          # Install dependencies
+          # Install dependencies and create lock file if it doesn't exist
           echo "🔧 Installing dependencies..."
-          npm install
+          if [ ! -f "package-lock.json" ]; then
+            echo "🔒 Creating package-lock.json..."
+            npm install --package-lock-only
+          fi
+          
+          # Install dependencies using the lock file
+          echo "📦 Installing dependencies from lock file..."
+          npm ci --no-audit --prefer-offline
           
           # Verify installation
           echo "✅ Dependencies installed"

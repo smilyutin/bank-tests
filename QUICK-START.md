@@ -160,14 +160,23 @@ Tests run automatically on:
 | File | Purpose |
 |------|---------|
 | `QUICK-START.md` | This file (quick reference) |
-| `OPTION-B-IMPLEMENTATION.md` | Complete implementation guide |
+| `PIPELINE-IMPLEMENTATION.md` | Complete implementation guide |
+| `FIX-DOCKER-COMPOSE-V2.md` | Docker Compose V2 fix details |
 | `.github/workflows/test-vuln-bank.yml` | Main workflow configuration |
 
-**Read Next:** `OPTION-B-IMPLEMENTATION.md` for full details.
+**Read Next:** `PIPELINE-IMPLEMENTATION.md` for full details.
 
 ---
 
 ## 🐛 Common Issues
+
+### Issue: "docker-compose: command not found"
+
+**Status:** ✅ **Already Fixed!**
+
+The workflow now uses Docker Compose V2 syntax (`docker compose` with space).
+
+**Details:** See `FIX-DOCKER-COMPOSE-V2.md`
 
 ### Issue: Workflow doesn't appear
 

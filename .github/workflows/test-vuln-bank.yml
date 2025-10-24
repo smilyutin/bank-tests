@@ -173,11 +173,11 @@ jobs:
         working-directory: ./app-repo
         run: |
           echo "Starting application..."
-          docker-compose up -d
+          docker compose up -d
           echo "Waiting for container to initialize..."
           sleep 10
           echo "Container status:"
-          docker-compose ps
+          docker compose ps
           docker ps
       
       - name: ⏳ Wait for APP to be Ready
@@ -211,7 +211,7 @@ jobs:
         working-directory: ./app-repo
         run: |
           echo "=== Application Logs (last 100 lines) ==="
-          docker-compose logs --tail=100
+          docker compose logs --tail=100
       
       # ==================== RUN TESTS ====================
       
@@ -317,10 +317,10 @@ jobs:
         working-directory: ./app-repo
         run: |
           mkdir -p ../app-logs
-          echo "Collecting docker-compose logs..."
-          docker-compose logs > ../app-logs/docker-compose.log 2>&1
+          echo "Collecting docker compose logs..."
+          docker compose logs > ../app-logs/docker-compose.log 2>&1
           echo "Collecting container logs..."
-          docker logs $(docker-compose ps -q app) > ../app-logs/app-container.log 2>&1 || true
+          docker logs $(docker compose ps -q app) > ../app-logs/app-container.log 2>&1 || true
           echo "Collecting system info..."
           docker ps > ../app-logs/docker-ps.log 2>&1
           docker images > ../app-logs/docker-images.log 2>&1
@@ -340,7 +340,7 @@ jobs:
         working-directory: ./app-repo
         run: |
           echo "Stopping containers..."
-          docker-compose down -v --remove-orphans
+          docker compose down -v --remove-orphans
           echo "Cleaning up Docker resources..."
           docker system prune -f
       

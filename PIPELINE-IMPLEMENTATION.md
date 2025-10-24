@@ -319,6 +319,34 @@ If app takes longer to start:
 
 ## 🐛 Troubleshooting
 
+### Issue: "docker-compose: command not found"
+
+**Cause:** GitHub Actions runners use Docker Compose V2
+
+**Fix:** Already fixed! Workflow uses `docker compose` (V2) instead of `docker-compose` (V1)
+
+**Note:** If you see this error:
+```
+docker-compose: command not found
+Error: Process completed with exit code 127
+```
+
+It means you're using old syntax. The workflow has been updated to use Docker Compose V2 syntax (`docker compose` with a space).
+
+**To test locally with V2:**
+```bash
+# Check your version
+docker compose version
+
+# If you only have V1 (docker-compose), install V2:
+# Mac: Docker Desktop includes it
+# Linux: 
+sudo apt-get update
+sudo apt-get install docker-compose-plugin
+```
+
+---
+
 ### Issue: "APP Repo not found"
 
 **Cause:** Repo is private and GITHUB_TOKEN doesn't have access

@@ -310,7 +310,15 @@ jobs:
           # Run tests with Allure reporting
           EXIT_CODE=0
           echo "🔒 Running Security tests with Allure reporting..."
-          npx playwright test --reporter=line,allure-playwright/reporter.ts || EXIT_CODE=$?
+          
+          # Run security tests with Allure reporting
+          npx playwright test tests/security/ \
+            --reporter=line,allure-playwright/reporter.ts \
+            --output=$ALLURE_RESULTS_DIR || EXIT_CODE=$?
+            
+          # Generate Allure report
+          echo "📊 Generating Allure report..."
+          npx allure generate $ALLURE_RESULTS_DIR --clean -o allure-report || echo "⚠️ Failed to generate Allure report"
           
           # List generated test results
           echo "Generated test results:"
@@ -528,9 +536,9 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./test-repo/allure-report
-          destination_dir: .  # Deploy to root of gh-pages
-          keep_files: false  # Clean the branch before deploy
+          publish_dir: ./test-repo/allure-report  # Path to the generated report
+          destination_dir: ./allure-report        # Keep it in a subdirectory
+          keep_files: false
           force_orphan: true
           user_name: 'GitHub Actions'
           user_email: 'actions@github.com'

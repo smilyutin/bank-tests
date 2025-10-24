@@ -69,12 +69,21 @@ jobs:
         with:
           path: test-repo
       
-      - name: 🔧 Setup Node.js for Tests
+      - name: 🛠 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: test-repo/package-lock.json
+          
+      - name: 📦 Install Allure CLI
+        run: |
+          # Install Allure globally
+          npm install -g allure-commandline
+          # Add Allure to PATH
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+          # Verify installation
+          which allure || echo "Allure not found in PATH"
+          allure --version || echo "Failed to get Allure version"
       
       - name: 📦 Install Test Dependencies
         working-directory: ./test-repo
@@ -311,14 +320,26 @@ jobs:
           EXIT_CODE=0
           echo "🔒 Running Security tests with Allure reporting..."
           
+          # Create directories if they don't exist
+          mkdir -p $ALLURE_RESULTS_DIR
+          
           # Run security tests with Allure reporting
           npx playwright test tests/security/ \
-            --reporter=line,allure-playwright/reporter.ts \
+            --reporter=line,allure-playwright \
             --output=$ALLURE_RESULTS_DIR || EXIT_CODE=$?
             
-          # Generate Allure report
+          # List generated test results
+          echo "Generated test results in $ALLURE_RESULTS_DIR:"
+          find $ALLURE_RESULTS_DIR -type f || echo "No test results found"
+          
+          # Generate Allure report using the globally installed allure
           echo "📊 Generating Allure report..."
-          npx allure generate $ALLURE_RESULTS_DIR --clean -o allure-report || echo "⚠️ Failed to generate Allure report"
+          allure generate $ALLURE_RESULTS_DIR --clean -o allure-report || \
+            { echo "⚠️ Failed to generate Allure report"; ls -la $ALLURE_RESULTS_DIR; exit 1; }
+            
+          # Verify report was generated
+          echo "Generated report files:"
+          find ./allure-report -type f | head -20 || echo "No report files found"
           
           # List generated test results
           echo "Generated test results:"
@@ -536,8 +557,8 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./test-repo/allure-report  # Path to the generated report
-          destination_dir: ./allure-report        # Keep it in a subdirectory
+          publish_dir: ./allure-report  # Path to the generated report
+          destination_dir: ./allure-report  # Keep it in a subdirectory
           keep_files: false
           force_orphan: true
           user_name: 'GitHub Actions'

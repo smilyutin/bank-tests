@@ -526,7 +526,9 @@ jobs:
           allure generate allure-results --clean -o allure-report
           
           # Create a simple index.html for GitHub Pages
-          echo '<!DOCTYPE html>
+          mkdir -p ./allure-report
+          cat > ./allure-report/index.html << 'EOL'
+          <!DOCTYPE html>
           <html>
           <head>
               <title>Allure Report</title>
@@ -535,35 +537,28 @@ jobs:
           <body>
               <p>Redirecting to <a href="./allure-report/index.html">Allure Report</a>...</p>
           </body>
-          </html>' > allure-report/index.html
+          </html>
+          EOL
           
+          # List files for debugging
+          echo "Files in allure-report directory:"
+          find ./allure-report -type f
+      
+      # ==================== DEPLOY TO GITHUB PAGES ====================
+      
       - name: 🚀 Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gh-pages'
+        if: always()
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: test-repo/allure-report  # The folder to deploy
-          branch: gh-pages                # The branch to deploy to
-          clean: true                     # Remove old files before deploying
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: ./test-repo/allure-report
+          clean: true
           clean-exclude: |
-            .nojekyll
             CNAME
+            .nojekyll
           commit-message: "Deploy Allure Report"
-          target-folder: allure-report    # The folder in the target branch
-          
-      # ==================== DEPLOY ALLURE REPORT ====================
-      
-      - name: 🚀 Deploy Allure Report to GitHub Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./allure-report  # Path to the generated report
-          destination_dir: ./allure-report  # Keep it in a subdirectory
-          keep_files: false
-          force_orphan: true
-          user_name: 'GitHub Actions'
-          user_email: 'actions@github.com'
-          commit_message: 'Deploy Allure Report for ${{ github.sha }}'
+          target-folder: .  # Deploy to root of gh-pages
           
       # ==================== SUMMARY ====================
       

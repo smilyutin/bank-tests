@@ -206,6 +206,73 @@ jobs:
           echo "API endpoint:"
           curl -v http://localhost:5001/api/ 2>&1 || echo "⚠️  No API endpoint"
       
+      - name: 🌱 Seed Database with Test Users
+        working-directory: ./test-repo
+        run: |
+          echo "Seeding database with fixture users..."
+          node -e "
+          const fs = require('fs');
+          const http = require('http');
+          
+          // Read fixture users
+          const users = JSON.parse(fs.readFileSync('tests/fixtures/users.json', 'utf8')).users;
+          console.log('Found ' + users.length + ' users to seed');
+          
+          // Function to create user
+          async function createUser(user) {
+            return new Promise((resolve) => {
+              const data = JSON.stringify({
+                username: user.username || user.email.split('@')[0],
+                email: user.email,
+                password: user.password
+              });
+              
+              const options = {
+                hostname: 'localhost',
+                port: 5001,
+                path: '/api/register',
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Content-Length': data.length
+                }
+              };
+              
+              const req = http.request(options, (res) => {
+                let body = '';
+                res.on('data', (chunk) => body += chunk);
+                res.on('end', () => {
+                  if (res.statusCode === 200 || res.statusCode === 201) {
+                    console.log('✅ Created user: ' + user.username);
+                  } else if (res.statusCode === 409 || res.statusCode === 400) {
+                    console.log('ℹ️  User exists: ' + user.username);
+                  } else {
+                    console.log('⚠️  Status ' + res.statusCode + ' for: ' + user.username);
+                  }
+                  resolve();
+                });
+              });
+              
+              req.on('error', (e) => {
+                console.log('❌ Error creating ' + user.username + ': ' + e.message);
+                resolve();
+              });
+              
+              req.write(data);
+              req.end();
+            });
+          }
+          
+          // Seed all users
+          (async () => {
+            for (const user of users.slice(0, 10)) {
+              await createUser(user);
+              await new Promise(r => setTimeout(r, 200));
+            }
+            console.log('✅ Database seeding complete!');
+          })();
+          "
+      
       - name: 📋 Show APP Startup Logs
         if: always()
         working-directory: ./app-repo

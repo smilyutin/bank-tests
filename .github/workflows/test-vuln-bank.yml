@@ -529,8 +529,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./test-repo/allure-report
-          destination_dir: ./allure-report
-          keep_files: true
+          destination_dir: .  # Deploy to root of gh-pages
+          keep_files: false  # Clean the branch before deploy
           force_orphan: true
           user_name: 'GitHub Actions'
           user_email: 'actions@github.com'

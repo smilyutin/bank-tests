@@ -580,17 +580,24 @@ jobs:
       
       - name: 🚀 Deploy to GitHub Pages
         if: always()
+        run: |
+          cd test-repo
+          ls -la
+          ls -la allure-report || echo "No allure-report directory found"
+        
+      - name: Deploy to GitHub Pages
+        if: always()
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
-          folder: ./test-repo/allure-report
+          folder: test-repo/allure-report
           clean: true
           clean-exclude: |
             CNAME
             .nojekyll
           commit-message: "Deploy Allure Report"
-          target-folder: .  # Deploy to root of gh-pages
+          target-folder: .
           
       # ==================== SUMMARY ====================
       

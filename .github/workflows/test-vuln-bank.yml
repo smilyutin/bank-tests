@@ -73,8 +73,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'test-repo/package-lock.json'
           
       - name: 📦 Install Allure CLI
         run: |
@@ -88,13 +86,23 @@ jobs:
           echo "Allure version: $(allure --version || echo 'Allure not found')"
       
       - name: 📦 Install Test Dependencies
+        working-directory: ./test-repo
         run: |
           echo "📂 Current directory: $(pwd)"
           echo "📦 Installing test-repo dependencies..."
           
-          # Go to test-repo directory
-          cd test-repo
-          echo "📂 Now in: $(pwd)"
+          # Set npm cache directory
+          npm config set cache '~/.npm'
+          
+          # Clean npm cache
+          npm cache clean --force
+          
+          # Set registry to default
+          npm config set registry https://registry.npmjs.org/
+          
+          # Verify npm config
+          echo "📦 npm config list:"
+          npm config list
           
           # Create package.json with required dependencies if it doesn't exist
           if [ ! -f package.json ]; then
@@ -112,16 +120,24 @@ jobs:
             EOL
           fi
           
-          # Install dependencies and create lock file if it doesn't exist
+          # Install dependencies
           echo "🔧 Installing dependencies..."
+          
+          # First, create package-lock.json if it doesn't exist
           if [ ! -f "package-lock.json" ]; then
             echo "🔒 Creating package-lock.json..."
             npm install --package-lock-only
           fi
           
-          # Install dependencies using the lock file
-          echo "📦 Installing dependencies from lock file..."
-          npm ci --no-audit --prefer-offline
+          # Then perform a clean install
+          echo "📦 Performing clean install..."
+          npm ci --no-audit
+          
+          # If ci fails, fall back to regular install
+          if [ $? -ne 0 ]; then
+            echo "⚠️ npm ci failed, falling back to npm install..."
+            npm install --no-audit
+          fi
           
           # Verify installation
           echo "✅ Dependencies installed"

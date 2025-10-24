@@ -1,17 +1,17 @@
 name: Test Vulnerable Bank Application
 
 on:
-  # Run on push to test repo
+  # Run on push to dev branch only
   push:
-    branches: [main, dev]
+    branches: [dev]
     paths:
-      - 'tests/**'
+      - 'tests/security/**'  # Only watch security test files
       - 'playwright.config.ts'
       - '.github/workflows/**'
   
-  # Run on PRs to test repo
+  # Run on PRs to dev branch
   pull_request:
-    branches: [main]
+    branches: [dev]
   
   # Manual trigger with options
   workflow_dispatch:
@@ -298,21 +298,9 @@ jobs:
           echo "================================================"
           echo ""
           
-          # Run tests based on selection
           EXIT_CODE=0
-          
-          case "$TEST_SUITE" in
-            security)
-              echo "🔒 Running Security tests..."
-              npm run test:sec || EXIT_CODE=$?
-              ;;
-              echo "🎯 Running Security test suites..."
-              echo ""
-              echo "1️⃣  Security Tests"
-              npm run test:sec || EXIT_CODE=$?
-              echo ""
-            
-          esac
+          echo "🔒 Running Security tests..."
+          npm run test:sec || EXIT_CODE=$?
           
           echo ""
           echo "================================================"
@@ -353,9 +341,17 @@ jobs:
           wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
           sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
           
+          # Add Allure to PATH
+          echo "/usr/share/allure/bin" >> $GITHUB_PATH
+          source $GITHUB_ENV
+          
           # Generate Allure report
           echo "Generating Allure report..."
-          npx allure generate ./allure-results --clean -o ./allure-report
+          echo "Current directory: $(pwd)"
+          echo "Allure version: $(allure --version || echo 'Allure not found in PATH')"
+          
+          # Generate report using full path to ensure it's found
+          /usr/share/allure/bin/allure generate ./allure-results --clean -o ./allure-report
           
           # Verify report was generated
           if [ -d "allure-report" ]; then
@@ -363,6 +359,7 @@ jobs:
             ls -la allure-report/
           else
             echo "❌ Failed to generate Allure report"
+            ls -la
             exit 1
           fi
       

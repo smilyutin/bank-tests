@@ -455,16 +455,38 @@ jobs:
             mkdir -p allure-results
           fi
           
-      - name: 📊 Generate and Publish Allure Report
-        uses: 8398a7/action-allure-report@v3
+      - name: 📦 Install Allure Commandline
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
+          sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
+          
+      - name: 📊 Generate Allure Report
+        working-directory: ./test-repo
+        run: |
+          # Generate Allure report
+          allure generate allure-results --clean -o allure-report
+          
+          # Create a simple index.html for GitHub Pages
+          echo '<!DOCTYPE html>
+          <html>
+          <head>
+              <title>Allure Report</title>
+              <meta http-equiv="refresh" content="0; url=./allure-report/index.html" />
+          </head>
+          <body>
+              <p>Redirecting to <a href="./allure-report/index.html">Allure Report</a>...</p>
+          </body>
+          </html>' > allure-report/index.html
+          
+      - name: 🚀 Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gh-pages'
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          report-dir: ./test-repo/allure-results
-          report-version: 2.24.0
-          gh-pages: true
-          gh-pages-branch: gh-pages
-          gh-pages-folder: allure-report
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          folder: test-repo/allure-report
+          branch: gh-pages
+          clean: true
           clean-exclude: |
             .nojekyll
             CNAME

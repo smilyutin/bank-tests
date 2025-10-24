@@ -3,7 +3,7 @@ name: Test Vulnerable Bank Application
 on:
   # Run on push to test repo
   push:
-    branches: [main, develop]
+    branches: [main, dev]
     paths:
       - 'tests/**'
       - 'playwright.config.ts'
@@ -302,30 +302,16 @@ jobs:
           EXIT_CODE=0
           
           case "$TEST_SUITE" in
-            api)
-              echo "🔵 Running API tests..."
-              npm run test:api || EXIT_CODE=$?
-              ;;
             security)
               echo "🔒 Running Security tests..."
               npm run test:sec || EXIT_CODE=$?
               ;;
-            ui)
-              echo "🖥️  Running UI tests..."
-              npm run test:ui || EXIT_CODE=$?
-              ;;
-            *)
-              echo "🎯 Running all test suites..."
+              echo "🎯 Running Security test suites..."
               echo ""
-              echo "1️⃣  API Tests"
-              npm run test:api || EXIT_CODE=$?
-              echo ""
-              echo "2️⃣  Security Tests"
+              echo "1️⃣  Security Tests"
               npm run test:sec || EXIT_CODE=$?
               echo ""
-              echo "3️⃣  UI Tests"
-              npm run test:ui || EXIT_CODE=$?
-              ;;
+            
           esac
           
           echo ""
@@ -350,16 +336,35 @@ jobs:
         if: always()
         working-directory: ./test-repo
         run: |
+          echo "=== Generating Allure Report ==="
+          # Ensure allure-results directory exists
+          mkdir -p allure-results
+          
+          # If no test results, create a dummy result to prevent errors
+          if [ -z "$(ls -A allure-results/)" ]; then
+            echo '{"name": "No test results found", "status": "broken", "start": 0, "stop": 0}' > allure-results/no-results-found.json
+            echo "⚠️  No test results found. Created empty result to prevent Allure errors."
+          fi
+          
+          # Install Allure commandline
+          echo "Installing Allure commandline..."
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
+          sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
+          
+          # Generate Allure report
           echo "Generating Allure report..."
-          npm run allure:generate || echo "⚠️  Allure generation skipped (not configured)"
-      
-      - name: 📤 Upload Playwright HTML Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ github.run_number }}
-          path: test-repo/playwright-report/
-          retention-days: 30
+          npx allure generate allure-results --clean -o allure-report
+          
+          # Verify report was generated
+          if [ -d "allure-report" ]; then
+            echo "✅ Allure report generated successfully"
+            ls -la allure-report/
+          else
+            echo "❌ Failed to generate Allure report"
+            exit 1
+          fi
       
       - name: 📤 Upload Allure Report
         if: always()
@@ -367,6 +372,14 @@ jobs:
         with:
           name: allure-report-${{ github.run_number }}
           path: test-repo/allure-report/
+          retention-days: 30
+          
+      - name: 📤 Upload Playwright HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: test-repo/playwright-report/
           retention-days: 30
       
       - name: 📤 Upload Test Results

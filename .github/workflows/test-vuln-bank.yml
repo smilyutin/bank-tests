@@ -88,13 +88,28 @@ jobs:
       - name: 📦 Install Test Dependencies
         working-directory: ./test-repo
         run: |
-          # Install dependencies
-          npm install
-          # Create package-lock.json if it doesn't exist
-          if [ ! -f package-lock.json ]; then
-            npm install --package-lock-only
+          echo "Current directory: $(pwd)"
+          echo "Files in directory:"
+          ls -la
+          
+          # Create package.json if it doesn't exist
+          if [ ! -f package.json ]; then
+            echo '{"name":"bank-tests","version":"1.0.0"}' > package.json
           fi
-          # Now run ci
+          
+          # Install dependencies and create lock file
+          npm install --no-package-lock
+          npm install --package-lock-only
+          
+          # Verify lock file was created
+          if [ -f package-lock.json ]; then
+            echo "✅ package-lock.json created successfully"
+          else
+            echo "❌ Failed to create package-lock.json"
+            exit 1
+          fi
+          
+          # Install dependencies using the lock file
           npm ci
       
       - name: 🎭 Install Playwright Browsers

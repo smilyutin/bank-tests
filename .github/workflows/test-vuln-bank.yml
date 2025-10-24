@@ -93,80 +93,45 @@ jobs:
           echo "📂 Current directory: $(pwd)"
           echo "📦 Setting up test-repo dependencies..."
           
-          # Initialize npm if package.json doesn't exist
-          if [ ! -f "package.json" ]; then
-            echo "📝 Creating package.json..."
-            npm init -y
-          fi
+          # Clean up previous installations
+          echo "🧹 Cleaning up previous installations..."
+          rm -rf node_modules package-lock.json
           
-          # Install required packages
-          echo "📦 Installing dependencies..."
-          npm install @playwright/test@^1.40.0 allure-playwright@^2.0.0 --save-dev
-          
-          # Verify installation
-          echo "✅ Dependencies installed"
-          echo "📦 package.json:"
-          cat package.json
-          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
-          
-          # Install Playwright browsers
-          echo "🌐 Installing Playwright browsers..."
-          npx playwright install --with-deps chromium
-          
-          # Verify installation
-          echo "✅ Playwright browsers installed"
-          
-          # Set registry to default
-          npm config set registry https://registry.npmjs.org/
-          
-          # Verify npm config
-          echo "📦 npm config list:"
-          npm config list
-          
-          # Create package.json with required dependencies if it doesn't exist
-          if [ ! -f package.json ]; then
-            echo "📝 Creating package.json..."
-            cat > package.json << 'EOL'
-            {
-              "name": "bank-tests",
-              "version": "1.0.0",
-              "private": true,
-              "dependencies": {
-                "@playwright/test": "^1.40.0",
-                "allure-playwright": "^2.0.0"
-              }
+          # Create a fresh package.json
+          echo "📝 Creating package.json..."
+          cat > package.json << 'EOL'
+          {
+            "name": "bank-tests",
+            "version": "1.0.0",
+            "private": true,
+            "scripts": {
+              "test": "playwright test"
+            },
+            "devDependencies": {
+              "@playwright/test": "1.40.0",
+              "allure-playwright": "2.0.0"
             }
-            EOL
-          fi
+          }
+          EOL
+          
+          # Set npm registry and clean cache
+          echo "⚙️ Configuring npm..."
+          npm config set registry https://registry.npmjs.org/
+          npm cache clean --force
           
           # Install dependencies
-          echo "🔧 Installing dependencies..."
-          
-          # First, create package-lock.json if it doesn't exist
-          if [ ! -f "package-lock.json" ]; then
-            echo "🔒 Creating package-lock.json..."
-            npm install --package-lock-only
-          fi
-          
-          # Then perform a clean install
-          echo "📦 Performing clean install..."
-          npm ci --no-audit
-          
-          # If ci fails, fall back to regular install
-          if [ $? -ne 0 ]; then
-            echo "⚠️ npm ci failed, falling back to npm install..."
-            npm install --no-audit
-          fi
+          echo "📦 Installing dependencies..."
+          npm install --no-audit --no-fund --prefer-offline
           
           # Verify installation
           echo "✅ Dependencies installed"
-          echo "📦 package.json:"
-          cat package.json
-          echo -e "\n📦 package-lock.json exists: $( [ -f package-lock.json ] && echo '✅ Yes' || echo '❌ No' )"
+          echo "📦 Installed packages:"
+          npm list --depth=0
           
           # Install Playwright browsers
           echo "🌐 Installing Playwright browsers..."
           npx playwright install --with-deps chromium
+          npx playwright --version
 
       - name: 📥 Clone APP Repo
         uses: actions/checkout@v4

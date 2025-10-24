@@ -363,14 +363,13 @@ jobs:
           ls -la "$ALLURE_RESULTS_DIR" || echo "Could not list results directory"
           
           # Generate the report
+          mkdir -p ./allure-report
           allure generate "$ALLURE_RESULTS_DIR" --clean -o ./allure-report
           
           # Verify report was generated
           if [ -d "allure-report" ]; then
             echo "✅ Allure report generated successfully"
             ls -la allure-report/
-            # Create an index.html for direct access to the report
-            echo "<meta http-equiv=\"refresh\" content=\"0; url=./allure-report/index.html\" />" > allure-report/index.html
           else
             echo "❌ Failed to generate Allure report"
             echo "Current directory: $(pwd)"
@@ -518,27 +517,53 @@ jobs:
           commit-message: "Deploy Allure Report"
           target-folder: allure-report    # The folder in the target branch
           
+      # ==================== DEPLOY ALLURE REPORT ====================
+      
+      - name: 🚀 Deploy Allure Report to GitHub Pages
+        if: always()
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: test-repo/allure-report
+          branch: gh-pages
+          target-folder: allure-report
+          clean: true
+          clean-exclude: |
+            .nojekyll
+            CNAME
+          commit-message: "Deploy Allure Report for ${{ github.sha }}"
+          
       # ==================== SUMMARY ====================
       
       - name: 📝 Test Summary
         if: always()
         run: |
-          echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Security Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| APP Repo | \`${{ env.APP_REPO }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| APP Branch | \`${{ env.APP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Suite | \`${{ env.TEST_SUITE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| APP Repo | \`${{ env.APP_REPO }}@${{ env.APP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| SOFT Mode | \`${{ env.SOFT_MODE }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get the workflow run URL
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
           echo "### 📊 Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- [Playwright HTML Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- [Allure Report](https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Test Results JSON](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- [Application Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- [View All Artifacts]($WORKFLOW_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download Security Test Results]($WORKFLOW_URL/artifacts/$(echo -n \"test-results-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download Application Logs]($WORKFLOW_URL/artifacts/$(echo -n \"app-logs-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
+          
+          # Add link to GitHub Pages Allure report
+          if [ "${{ job.status }}" != "cancelled" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🌐 Allure Report" >> $GITHUB_STEP_SUMMARY
+            echo "- [View Latest Allure Report on GitHub Pages](https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/)" >> $GITHUB_STEP_SUMMARY
+            echo "- [Download Allure Report]($WORKFLOW_URL/artifacts/$(echo -n \"allure-report-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🌐 View Reports Online" >> $GITHUB_STEP_SUMMARY
-          echo "- **Allure Report:** https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Full Workflow Run]($WORKFLOW_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- [View All Security Test Runs](${{ github.server_url }}/${{ github.repository }}/actions/workflows/$(basename $GITHUB_WORKFLOW))" >> $GITHUB_STEP_SUMMARY
           echo "- **GitHub Actions Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY

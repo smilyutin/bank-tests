@@ -87,7 +87,15 @@ jobs:
       
       - name: 📦 Install Test Dependencies
         working-directory: ./test-repo
-        run: npm ci
+        run: |
+          # Install dependencies
+          npm install
+          # Create package-lock.json if it doesn't exist
+          if [ ! -f package-lock.json ]; then
+            npm install --package-lock-only
+          fi
+          # Now run ci
+          npm ci
       
       - name: 🎭 Install Playwright Browsers
         working-directory: ./test-repo

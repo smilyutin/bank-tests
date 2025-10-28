@@ -42,7 +42,7 @@ on:
   
   # Scheduled runs (nightly at 2 AM UTC)
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * 1'
 
 env:
   APP_REPO: 'smilyutin/vuln_bank'

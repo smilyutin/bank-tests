@@ -19,7 +19,7 @@
     "allure:serve": "npx allure serve allure-results"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^24.9.0",
     "allure-playwright": "^3.4.1",
     "typescript": "^5.0.0"

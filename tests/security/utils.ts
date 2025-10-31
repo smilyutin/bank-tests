@@ -1,6 +1,8 @@
 // ...existing code, only one set of imports and exports...
 import { APIRequestContext, request as playwrightRequest, TestInfo } from '@playwright/test';
 import { loadUsers, createRandomUser, saveUser } from '../../tests/utils/credentials';
+import { LOGIN_SELECTORS, getInputLocator } from './selectors.config';
+import type { Page } from '@playwright/test';
 
 export const LOGIN_CANDIDATES = [
   '/api/login',
@@ -146,4 +148,66 @@ export async function ensureTestUser(request: APIRequestContext) {
   const u = createRandomUser('sec');
   saveUser(u);
   return u;
+}
+
+/**
+ * Perform a UI login using Playwright page and return a Cookie header string.
+ * This handles CSRF-protected forms and stores cookies in the browser context.
+ */
+export async function performUiLogin(page: Page, baseURL: string, user: { email?: string; username?: string; password: string }) {
+  const basePath = LOGIN_SELECTORS.loginPath || '/login';
+  // Try primary login path and alternatives. Also try /register as a fallback
+  // because some apps expose only a registration form that also performs login
+  // or immediately creates a session after register.
+  const paths = [LOGIN_SELECTORS.loginPath, ...(LOGIN_SELECTORS.alternativePaths || [])];
+  if (!paths.includes('/register')) paths.push('/register');
+  for (const p of paths) {
+    try {
+      const url = new URL(p, baseURL || 'http://localhost').toString();
+      const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null as any);
+      // Debug: surface what paths we visited when UI login is attempted
+      try {
+        // eslint-disable-next-line no-console
+        console.log(`[ui-login] Visiting ${url} => ${resp ? resp.status() : 'no-response'}`);
+      } catch (e) {}
+      if (!resp) continue;
+      // find input locators
+      const emailLocator = await getInputLocator(page, LOGIN_SELECTORS.emailInput);
+      const passwordLocator = await getInputLocator(page, LOGIN_SELECTORS.passwordInput);
+      const submitLocator = await getInputLocator(page, LOGIN_SELECTORS.submitButton);
+      if (!emailLocator || !passwordLocator || !submitLocator) continue;
+      await emailLocator.fill(user.email || user.username || '');
+      await passwordLocator.fill(user.password);
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle', timeout: 5000 }).catch(() => null),
+        submitLocator.click().catch(() => null)
+      ]);
+      // After login attempt, collect cookies from context
+      const cookies = await page.context().cookies();
+      if (cookies && cookies.length) {
+        const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        return { cookieHeader, cookies };
+      }
+    } catch (e) {
+      // try next path
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Build a Cookie header string from a Set-Cookie header value (string or array)
+ * Preserves full cookie name=value pairs and joins them with `; ` as required by Cookie header.
+ */
+export function buildCookieHeaderFromSetCookie(setCookieHeader: string | string[] | undefined): string | null {
+  if (!setCookieHeader) return null;
+  const arr = Array.isArray(setCookieHeader) ? setCookieHeader : String(setCookieHeader).split(/,(?=\s*[^\s]+=)/);
+  const pairs: string[] = [];
+  for (const sc of arr) {
+    const m = sc.match(/^(\s*([^=;\s]+)=([^;\s]+))/);
+    if (m && m[1]) pairs.push(m[1].trim());
+  }
+  if (!pairs.length) return null;
+  return pairs.join('; ');
 }

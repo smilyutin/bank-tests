@@ -74,6 +74,15 @@
     {
       "email": "test+e1ay6q@example.com",
       "password": "Password123!"
+    },
+    {
+      "email": "test+t67erp@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eazjjt6p2",
+      "email": "e2e+azjjt6p2@example.com",
+      "password": "Password123!"
     }
   ]
 }

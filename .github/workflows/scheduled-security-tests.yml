@@ -21,4 +21,5 @@ jobs:
       app_branch: ${{ github.event.inputs.app_branch || 'main' }}
       soft_mode: 'false'
       test_suite: 'security'
-    secrets: inherit
+    secrets:
+      PAT: ${{ secrets.PAT }}

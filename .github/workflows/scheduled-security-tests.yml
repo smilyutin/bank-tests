@@ -22,9 +22,10 @@ jobs:
       contents: read
     
     steps:
-      - name: 🚀 Trigger Main Test Workflow
+      - name: Trigger Main Test Workflow
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.PAT }}
           script: |
             const result = await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,

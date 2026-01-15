@@ -192,7 +192,7 @@ jobs:
           path: app-repo
           token: ${{ secrets.PAT }}
       
-      - name: 🔧 Setup Node.js for APP
+      - name: Setup Node.js for APP
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -259,7 +259,7 @@ jobs:
           echo "docker-compose.yml:"
           cat docker-compose.yml
       
-      - name: 🔨 Build APP Docker Image
+      - name: Build APP Docker Image
         working-directory: ./app-repo
         run: |
           echo "Building Docker image..."
@@ -280,12 +280,12 @@ jobs:
           docker compose ps
           docker ps
       
-      - name:  Wait for APP to be Ready
+      - name: Wait for APP to be Ready
         run: |
           echo "Waiting for application to respond..."
           timeout 120 bash -c '
             until curl -f http://localhost:5001/health 2>/dev/null || curl -f http://localhost:5001/ 2>/dev/null; do 
-              echo "⏳ Waiting for app... ($(date +%T))"
+              echo "Waiting for app... ($(date +%T))"
               docker ps
               sleep 3
             done
@@ -608,7 +608,7 @@ jobs:
       - name:  Test Summary
         if: always()
         run: |
-          echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
@@ -679,7 +679,7 @@ jobs:
       - name:  Test Summary
         if: always()
         run: |
-          echo "## 🎯 Security Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Security Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY

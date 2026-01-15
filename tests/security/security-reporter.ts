@@ -450,7 +450,7 @@ export class SecurityReporter {
     try {
       this.testInfo.attach(`security-report-${Date.now()}`, {
         body: report,
-        contentType: 'text/markdown'
+        contentType: 'text/plain'
       });
     } catch (e) {
       // Fallback to full console output

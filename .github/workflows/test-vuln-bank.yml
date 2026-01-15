@@ -63,23 +63,29 @@ jobs:
       pages: write    # For GitHub Pages deployment
       id-token: write # For GitHub OIDC token
       pull-requests: write # For adding comments to PRs
-    
+
     steps:
+      - name: Check for PAT secret
+        run: |
+          if [ -z "${{ secrets.PAT }}" ]; then
+            echo "ERROR: The PAT secret is not set. Please add a Personal Access Token named 'PAT' to your repository secrets."
+            exit 1
+          fi
       # ==================== SETUP TEST REPO ====================
       
-      - name: 📥 Checkout Test Repo
+      - name:  Checkout Test Repo
         uses: actions/checkout@v4
         with:
           path: test-repo
       
-      - name: 🛠 Setup Node.js
+      - name:  Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'test-repo/package-lock.json'
           
-      - name: 📦 Install Allure CLI
+      - name:  Install Allure CLI
         run: |
           # Install Allure using the official Debian package
           echo "Installing Allure CLI..."
@@ -184,16 +190,14 @@ jobs:
           repository: ${{ env.APP_REPO }}
           ref: ${{ env.APP_BRANCH }}
           path: app-repo
-          # Use GITHUB_TOKEN (has access to public repos by default)
-          # For private repos, add a PAT as APP_REPO_TOKEN secret
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
       
       - name: 🔧 Setup Node.js for APP
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       
-      - name: 📦 Install APP Dependencies
+      - name:  Install APP Dependencies
         working-directory: ./app-repo
         run: |
           echo "Installing dependencies..."
@@ -203,12 +207,12 @@ jobs:
             npm install
           fi
       
-      - name: 🐳 Setup Docker Configuration
+      - name:  Setup Docker Configuration
         working-directory: ./app-repo
         run: |
           # Check if docker-compose.yml exists
           if [ ! -f "docker-compose.yml" ]; then
-            echo "⚠️  No docker-compose.yml found, creating one..."
+            echo "  No docker-compose.yml found, creating one..."
             cat > docker-compose.yml << 'EOF'
           version: '3.8'
           services:
@@ -227,12 +231,12 @@ jobs:
                 start_period: 30s
           EOF
           else
-            echo "✅ Found existing docker-compose.yml"
+            echo " Found existing docker-compose.yml"
           fi
           
           # Check if Dockerfile exists
           if [ ! -f "Dockerfile" ]; then
-            echo "⚠️  No Dockerfile found, creating one..."
+            echo " No Dockerfile found, creating one..."
             cat > Dockerfile << 'EOF'
           FROM node:20-alpine
           WORKDIR /app
@@ -245,7 +249,7 @@ jobs:
           CMD ["npm", "start"]
           EOF
           else
-            echo "✅ Found existing Dockerfile"
+            echo "Found existing Dockerfile"
           fi
           
           echo "=== Docker Configuration ==="
@@ -260,12 +264,12 @@ jobs:
         run: |
           echo "Building Docker image..."
           docker build -t vuln-bank:test .
-          echo "✅ Image built successfully"
+          echo "Image built successfully"
           docker images | grep vuln-bank
       
       # ==================== START APP ====================
       
-      - name: 🚀 Start APP Container
+      - name:  Start APP Container
         working-directory: ./app-repo
         run: |
           echo "Starting application..."
@@ -276,7 +280,7 @@ jobs:
           docker compose ps
           docker ps
       
-      - name: ⏳ Wait for APP to be Ready
+      - name:  Wait for APP to be Ready
         run: |
           echo "Waiting for application to respond..."
           timeout 120 bash -c '
@@ -286,23 +290,23 @@ jobs:
               sleep 3
             done
           '
-          echo "✅ Application is ready!"
+          echo " Application is ready!"
       
-      - name: 🔍 Verify APP Endpoints
+      - name:  Verify APP Endpoints
         run: |
           echo "=== Testing Endpoints ==="
           echo "Main endpoint:"
-          curl -v http://localhost:5001/ 2>&1 | head -20 || echo "❌ Failed"
+          curl -v http://localhost:5001/ 2>&1 | head -20 || echo "Failed"
           
           echo ""
           echo "Health endpoint:"
-          curl -v http://localhost:5001/health 2>&1 || echo "⚠️  No health endpoint"
+          curl -v http://localhost:5001/health 2>&1 || echo "  No health endpoint"
           
           echo ""
           echo "API endpoint:"
-          curl -v http://localhost:5001/api/ 2>&1 || echo "⚠️  No API endpoint"
+          curl -v http://localhost:5001/api/ 2>&1 || echo " No API endpoint"
       
-      - name: 🌱 Seed Database with Test Users
+      - name:  Seed Database with Test Users
         working-directory: ./test-repo
         run: |
           echo "Seeding database with fixture users..."
@@ -339,18 +343,18 @@ jobs:
                 res.on('data', (chunk) => body += chunk);
                 res.on('end', () => {
                   if (res.statusCode === 200 || res.statusCode === 201) {
-                    console.log('✅ Created user: ' + user.username);
+                    console.log(' Created user: ' + user.username);
                   } else if (res.statusCode === 409 || res.statusCode === 400) {
-                    console.log('ℹ️  User exists: ' + user.username);
+                    console.log('ℹ  User exists: ' + user.username);
                   } else {
-                    console.log('⚠️  Status ' + res.statusCode + ' for: ' + user.username);
+                    console.log('  Status ' + res.statusCode + ' for: ' + user.username);
                   }
                   resolve();
                 });
               });
               
               req.on('error', (e) => {
-                console.log('❌ Error creating ' + user.username + ': ' + e.message);
+                console.log(' Error creating ' + user.username + ': ' + e.message);
                 resolve();
               });
               
@@ -365,11 +369,11 @@ jobs:
               await createUser(user);
               await new Promise(r => setTimeout(r, 200));
             }
-            console.log('✅ Database seeding complete!');
+            console.log(' Database seeding complete!');
           })();
           "
       
-      - name: 📋 Show APP Startup Logs
+      - name:  Show APP Startup Logs
         if: always()
         working-directory: ./app-repo
         run: |
@@ -378,7 +382,7 @@ jobs:
       
       # ==================== RUN TESTS ====================
       
-      - name: 🧪 Run Tests
+      - name:  Run Tests
         working-directory: ./test-repo
         env:
           BASE_URL: ${{ env.BASE_URL }}
@@ -386,7 +390,7 @@ jobs:
           ALLURE_RESULTS_DIR: ${{ env.ALLURE_RESULTS_DIR }}
         run: |
           echo "================================================"
-          echo "🎯 Test Configuration"
+          echo " Test Configuration"
           echo "================================================"
           echo "Target URL:    $BASE_URL"
           echo "SOFT mode:     $SECURITY_SOFT"
@@ -400,10 +404,10 @@ jobs:
           
           # Run tests with Allure reporting
           EXIT_CODE=0
-          echo "🔒 Running $TEST_SUITE tests with Allure reporting..."
+          echo " Running $TEST_SUITE tests with Allure reporting..."
           
           # Run tests with Allure reporting and timeout
-          echo "🚀 Starting tests..."
+          echo " Starting tests..."
           timeout 15m npx playwright test tests/$TEST_SUITE/ \
             --reporter=line,allure-playwright \
             --output=$ALLURE_RESULTS_DIR \
@@ -411,31 +415,51 @@ jobs:
             --timeout=300000 || EXIT_CODE=$?
             
           if [ $EXIT_CODE -eq 124 ]; then
-            echo "⚠️ Tests timed out after 15 minutes"
+            echo " Tests timed out after 15 minutes"
             EXIT_CODE=0  # Don't fail the build on timeout
           fi
             
           # List generated test results
-          echo "📊 Test results collected in: $ALLURE_RESULTS_DIR"
+          echo " Test results collected in: $ALLURE_RESULTS_DIR"
           find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
           
           # Set status based on test results and SOFT_MODE
           if [ $EXIT_CODE -ne 0 ]; then
             if [ "$SECURITY_SOFT" = "true" ]; then
-              echo "⚠️  Tests found issues (SOFT mode - not failing build)"
+              echo "  Tests found issues (SOFT mode - not failing build)"
               EXIT_CODE=0
             else
-              echo "❌ Tests failed (HARD mode - failing build)"
+              echo " Tests failed (HARD mode - failing build)"
             fi
           else
-            echo "✅ Tests completed successfully"
+            echo " Tests completed successfully"
           fi
           
           exit $EXIT_CODE
       
+      # ==================== DATABASE VALIDATION ====================
+      
+      - name:  Validate Database (Check for Mass Assignment)
+        if: always()
+        working-directory: ./test-repo
+        run: |
+          echo "=== Database Validation ==="
+          
+          # Try to find and validate the database
+          # First, try to copy from container
+          CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E 'vuln|bank|app' | head -1)
+          
+          if [ -n "$CONTAINER_NAME" ]; then
+            echo "Found container: $CONTAINER_NAME"
+            node scripts/validate-db.js --container="$CONTAINER_NAME" || true
+          else
+            echo "  No container found for database validation"
+            echo "Skipping database validation (container not available)"
+          fi
+      
       # ==================== GENERATE REPORTS ====================
       
-      - name: 📊 Generate Allure Report
+      - name:  Generate Allure Report
         if: always()
         working-directory: ./test-repo
         env:
@@ -450,11 +474,11 @@ jobs:
           # Create a placeholder if no results found
           if [ -z "$(ls -A "$ALLURE_RESULTS_DIR/" 2>/dev/null)" ]; then
             echo '{"name": "No test results found", "status": "broken"}' > "$ALLURE_RESULTS_DIR/no-results.json"
-            echo "⚠️  No test results found. Using placeholder."
+            echo "  No test results found. Using placeholder."
           fi
           
           # Generate the report
-          echo "📊 Generating report from: $ALLURE_RESULTS_DIR"
+          echo " Generating report from: $ALLURE_RESULTS_DIR"
           # Clean previous report if exists
           rm -rf "$ALLURE_REPORT_DIR"
           # Generate new report
@@ -462,65 +486,66 @@ jobs:
           
           # Create a simple index if no report was generated
           if [ ! -f "$ALLURE_REPORT_DIR/index.html" ]; then
-            echo "📝 Creating placeholder index.html..."
+            echo " Creating placeholder index.html..."
             echo "<h1>Allure Report</h1><p>No test results found. Check the test run for details.</p>" > "$ALLURE_REPORT_DIR/index.html"
           fi
           
           # Ensure the report is accessible from the root of the site
-          echo "📝 Creating .nojekyll and CNAME files..."
+          echo " Creating .nojekyll and CNAME files..."
           touch "$ALLURE_REPORT_DIR/.nojekyll"
           echo "${{ github.repository_owner }}.github.io" > "$ALLURE_REPORT_DIR/CNAME"
           
-          echo "✅ Report generated at: $ALLURE_REPORT_DIR"
-          echo "📂 Report directory contents:"
+          echo " Report generated at: $ALLURE_REPORT_DIR"
+          echo " Report directory contents:"
           ls -la "$ALLURE_REPORT_DIR"
       
-      - name: 🚀 Prepare GitHub Pages
+      - name:  Prepare GitHub Pages
         if: always()
         run: |
           # Show current directory structure
-          echo "📂 Current directory structure:"
+          echo  Current directory structure:"
           ls -la
           
           # Show contents of ALLURE_REPORT_DIR
-          echo "📦 Contents of $ALLURE_REPORT_DIR:"
+          echo  "Contents of $ALLURE_REPORT_DIR:"
           ls -la "$ALLURE_REPORT_DIR/"
           
           # Create target directory if it doesn't exist
           mkdir -p ./deploy-report
           
           # Copy the report to the target directory
-          echo "📦 Copying report to deploy-report/"
+          echo "Copying report to deploy-report/"
           cp -r "$ALLURE_REPORT_DIR/"* ./deploy-report/
           
           # Show what's being deployed
-          echo "📦 Contents of deploy-report/:"
+          echo "Contents of deploy-report/:"
           ls -la ./deploy-report/
       
       - name: Deploy to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PAT }}
           publish_dir: ./deploy-report
           keep_files: true
           cname: ${{ github.repository_owner }}.github.io
           commit_message: 'Deploy Allure Report [skip ci]'
       
-      - name: 💬 Add Report URL to PR
+      - name: Add Report URL to PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.PAT }}
           script: |
             const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo.split('/')[1]}/allure-report/`
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `📊 [View Allure Report](${reportUrl})`
+              body: `[View Allure Report](${reportUrl})`
             })
       
-      - name: 📦 Upload Artifacts
+      - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -534,7 +559,7 @@ jobs:
       
       # ==================== COLLECT LOGS ====================
       
-      - name: 📋 Collect APP Logs
+      - name:  Collect APP Logs
         if: always()
         working-directory: ./app-repo
         run: |
@@ -547,7 +572,7 @@ jobs:
           docker ps > ../app-logs/docker-ps.log 2>&1
           docker images > ../app-logs/docker-images.log 2>&1
       
-      - name: 📤 Upload APP Logs
+      - name:  Upload APP Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -557,7 +582,7 @@ jobs:
       
       # ==================== CLEANUP ====================
       
-      - name: 🧹 Stop and Remove Containers
+      - name:  Stop and Remove Containers
         if: always()
         working-directory: ./app-repo
         run: |
@@ -566,7 +591,7 @@ jobs:
           echo "Cleaning up Docker resources..."
           docker system prune -f
       
-      - name: ✅ Verify Cleanup
+      - name:  Verify Cleanup
         if: always()
         run: |
           echo "=== Remaining Containers ==="
@@ -580,7 +605,7 @@ jobs:
       
       # ==================== SUMMARY ====================
       
-      - name: 📝 Test Summary
+      - name:  Test Summary
         if: always()
         run: |
           echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
@@ -595,33 +620,33 @@ jobs:
           REPORT_URL="https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/"
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "###  Test Results" >> $GITHUB_STEP_SUMMARY
           echo "- [View Allure Report]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
           
           # Add test results summary if available
           if [ -d "test-repo/allure-results" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📈 Test Statistics" >> $GITHUB_STEP_SUMMARY
+            echo "###  Test Statistics" >> $GITHUB_STEP_SUMMARY
             
             # Count test results
             TOTAL_TESTS=$(find test-repo/allure-results -name "*.json" | wc -l)
             PASSED_TESTS=$(grep -r "status\":\"passed\"" test-repo/allure-results | wc -l || echo 0)
             FAILED_TESTS=$(grep -r "status\":\"failed\"" test-repo/allure-results | wc -l || echo 0)
             
-            echo "- ✅ Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
-            echo "- 📊 Total: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "-  Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "-  Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "-  Total: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
           fi
           
       # ==================== DEPLOY TO GITHUB PAGES ====================
       
-      - name: 🚀 Deploy to GitHub Pages
+      - name:  Deploy to GitHub Pages
         if: always()
         working-directory: ./test-repo
         run: |
-          echo "📂 Current directory: $(pwd)"
-          echo "📦 Files in allure-report:"
+          echo " Current directory: $(pwd)"
+          echo " Files in allure-report:"
           ls -la allure-report/ || echo "No allure-report directory found"
           
           # Ensure the target directory exists
@@ -629,12 +654,12 @@ jobs:
           
           # Create a simple index.html if it doesn't exist
           if [ ! -f "allure-report/index.html" ]; then
-            echo "📝 Creating index.html..."
+            echo " Creating index.html..."
             echo "<h1>Allure Report</h1><p>Report will be available after first successful test run.</p>" > allure-report/index.html
           fi
           
           # Install gh-pages locally
-          echo "📦 Installing gh-pages..."
+          echo " Installing gh-pages..."
           npm install --save-dev gh-pages
           
           # Configure git
@@ -642,16 +667,16 @@ jobs:
           git config --global user.email "actions@github.com"
           
           # Deploy to gh-pages branch
-          echo "🚀 Deploying to GitHub Pages..."
+          echo " Deploying to GitHub Pages..."
           npx gh-pages -d allure-report \
-            --repo https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+            --repo https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git \
             --user "GitHub Actions <actions@github.com>" \
             --message "Deploy Allure Report [skip ci]" \
             --no-history
           
       # ==================== SUMMARY ====================
       
-      - name: 📝 Test Summary
+      - name:  Test Summary
         if: always()
         run: |
           echo "## 🎯 Security Test Execution Summary" >> $GITHUB_STEP_SUMMARY
@@ -666,7 +691,7 @@ jobs:
           # Get the workflow run URL
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          echo "### 📊 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "###  Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- [View All Artifacts]($WORKFLOW_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- [Download Security Test Results]($WORKFLOW_URL/artifacts/$(echo -n \"test-results-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
           echo "- [Download Application Logs]($WORKFLOW_URL/artifacts/$(echo -n \"app-logs-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
@@ -674,13 +699,13 @@ jobs:
           # Add link to GitHub Pages Allure report
           if [ "${{ job.status }}" != "cancelled" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🌐 Allure Report" >> $GITHUB_STEP_SUMMARY
+            echo "###  Allure Report" >> $GITHUB_STEP_SUMMARY
             echo "- [View Latest Allure Report on GitHub Pages](https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/allure-report/)" >> $GITHUB_STEP_SUMMARY
             echo "- [Download Allure Report]($WORKFLOW_URL/artifacts/$(echo -n \"allure-report-${{ github.run_number }}\" | jq -sRr @uri))" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "###  Quick Links" >> $GITHUB_STEP_SUMMARY
           echo "- [View Full Workflow Run]($WORKFLOW_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- [View All Security Test Runs](${{ github.server_url }}/${{ github.repository }}/actions/workflows/$(basename $GITHUB_WORKFLOW))" >> $GITHUB_STEP_SUMMARY
           echo "- **GitHub Actions Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY

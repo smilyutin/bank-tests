@@ -16,10 +16,12 @@ on:
 
 jobs:
   run-security-tests:
+    permissions:
+      contents: write      # For pushing to gh-pages
+      pull-requests: write # For adding PR comments
     uses: ./.github/workflows/test-vuln-bank.yml
     with:
       app_branch: ${{ github.event.inputs.app_branch || 'main' }}
       soft_mode: 'false'
       test_suite: 'security'
-    secrets:
-      PAT: ${{ secrets.PAT }}
+    secrets: inherit

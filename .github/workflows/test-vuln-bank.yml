@@ -60,7 +60,7 @@ on:
 env:
   APP_REPO: 'smilyutin/vuln_bank'
   APP_BRANCH: ${{ (github.event_name == 'workflow_call' && inputs.app_branch) || (github.event_name == 'workflow_dispatch' && github.event.inputs.app_branch) || 'main' }}
-  SOFT_MODE: ${{ (github.event_name == 'workflow_call' && inputs.soft_mode) || (github.event_name == 'workflow_dispatch' && github.event.inputs.soft_mode) || 'false' }}
+  SOFT_MODE: ${{ (github.event_name == 'workflow_call' && inputs.soft_mode) || (github.event_name == 'workflow_dispatch' && github.event.inputs.soft_mode) || (github.ref == 'refs/heads/dev' && 'true') || 'false' }}
   TEST_SUITE: ${{ (github.event_name == 'workflow_call' && inputs.test_suite) || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_suite) || 'security' }}
   BASE_URL: 'http://localhost:5001'
   NODE_VERSION: '20'

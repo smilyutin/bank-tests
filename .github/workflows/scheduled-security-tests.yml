@@ -17,6 +17,9 @@ on:
 jobs:
   run-security-tests:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write  # Required to trigger workflow_dispatch
+      contents: read
     
     steps:
       - name: 🚀 Trigger Main Test Workflow

@@ -390,6 +390,25 @@ jobs:
           fi
           echo " Test results collected in: $ALLURE_RESULTS_DIR"
           find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
+          
+          # Show test summary
+          if [ -f "$ALLURE_RESULTS_DIR"/*.json ]; then
+            echo ""
+            echo "=== Test Result Summary ==="
+            PASSED=$(grep -l '"status":"passed"' "$ALLURE_RESULTS_DIR"/*result.json 2>/dev/null | wc -l)
+            FAILED=$(grep -l '"status":"failed"' "$ALLURE_RESULTS_DIR"/*result.json 2>/dev/null | wc -l)
+            SKIPPED=$(grep -l '"status":"skipped"' "$ALLURE_RESULTS_DIR"/*result.json 2>/dev/null | wc -l)
+            echo "Passed:  $PASSED"
+            echo "Failed:  $FAILED"
+            echo "Skipped: $SKIPPED"
+            
+            if [ $FAILED -gt 0 ]; then
+              echo ""
+              echo "=== Failed Tests ==="
+              grep -h '"name":' "$ALLURE_RESULTS_DIR"/*result.json | grep -B1 '"status":"failed"' | grep '"name"' | head -10
+            fi
+          fi
+          
           if [ $EXIT_CODE -ne 0 ]; then
             if [ "$SECURITY_SOFT" = "true" ]; then
               echo "  Tests found issues (SOFT mode - not failing build)"
@@ -409,6 +428,11 @@ jobs:
         continue-on-error: true
         run: |
           echo "=== Database Validation ==="
+          if [ ! -f "scripts/validate-db.js" ]; then
+            echo "  Database validation script not found (scripts/validate-db.js)"
+            echo "Skipping database validation"
+            exit 0
+          fi
           CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E 'vuln|bank|app' | head -1)
           if [ -n "$CONTAINER_NAME" ]; then
             echo "Found container: $CONTAINER_NAME"

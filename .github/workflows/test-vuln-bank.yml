@@ -1,17 +1,38 @@
 name: Test Vulnerable Bank Application
 
 on:
+  # Allow other workflows to call this one directly
+  workflow_call:
+    inputs:
+      app_branch:
+        required: false
+        type: string
+        default: 'main'
+      soft_mode:
+        required: false
+        type: string
+        default: 'false'
+      test_suite:
+        required: false
+        type: string
+        default: 'security'
+    secrets:
+      PAT:
+        required: false
+
   # Run on push to dev branch only
   push:
-    branches: [dev]
+    branches:
+      - dev
     paths:
-      - 'tests/security/**'  # Only watch security test files
+      - 'tests/security/**'
       - 'playwright.config.ts'
       - '.github/workflows/**'
   
   # Run on PRs to dev branch
   pull_request:
-    branches: [dev]
+    branches:
+      - dev
   
   # Manual trigger with options
   workflow_dispatch:
@@ -24,31 +45,23 @@ on:
       soft_mode:
         description: 'Run in SOFT mode (warnings vs failures)'
         required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
+        default: 'false'
+        type: string
       test_suite:
         description: 'Which tests to run'
         required: false
-        default: 'all'
-        type: choice
-        options:
-          - 'all'
-          - 'api'
-          - 'security'
-          - 'ui'
-  
-  # Scheduled runs (nightly at 2 AM UTC)
+        default: 'security'
+        type: string
+
+  # Scheduled runs (every Monday at 2 AM UTC)
   schedule:
     - cron: '0 2 * * 1'
 
 env:
   APP_REPO: 'smilyutin/vuln_bank'
-  APP_BRANCH: ${{ inputs.app_branch || 'main' }}
-  SOFT_MODE: ${{ inputs.soft_mode || 'true' }}
-  TEST_SUITE: ${{ inputs.test_suite || 'all' }}
+  APP_BRANCH: ${{ (github.event_name == 'workflow_call' && inputs.app_branch) || (github.event_name == 'workflow_dispatch' && github.event.inputs.app_branch) || 'main' }}
+  SOFT_MODE: ${{ (github.event_name == 'workflow_call' && inputs.soft_mode) || (github.event_name == 'workflow_dispatch' && github.event.inputs.soft_mode) || 'false' }}
+  TEST_SUITE: ${{ (github.event_name == 'workflow_call' && inputs.test_suite) || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_suite) || 'security' }}
   BASE_URL: 'http://localhost:5001'
   NODE_VERSION: '20'
   ALLURE_RESULTS_DIR: ${{ github.workspace }}/test-repo/allure-results
@@ -62,6 +75,9 @@ jobs:
       contents: write  # Push to gh-pages
       pull-requests: write # Add comments to PRs
 
+    env:
+      PAT: ${{ secrets.PAT }}
+
     steps:
       - name: Check for PAT secret (optional)
         run: |
@@ -70,8 +86,8 @@ jobs:
           else
             echo "PAT secret is set."
           fi
+
       # ==================== SETUP TEST REPO ====================
-      
       - name:  Checkout Test Repo
         uses: actions/checkout@v4
         with:
@@ -83,25 +99,23 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'test-repo/package-lock.json'
+        continue-on-error: true
           
       - name:  Install Allure CLI
         run: |
-          # Install Allure using the official Debian package
           echo "Installing Allure CLI..."
           sudo apt-get update
           sudo apt-get install -y default-jre
           wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure_2.24.0-1_all.deb
           sudo dpkg -i allure_2.24.0-1_all.deb || sudo apt-get install -f -y
-          # Verify installation
+          echo "/usr/bin" >> $GITHUB_PATH
           echo "Allure version: $(allure --version || echo 'Allure not found')"
       
       - name: Install System Dependencies
         run: |
           echo "Updating package lists..."
           sudo apt-get update -qq
-          
           echo "Installing required system dependencies for Ubuntu 24.04..."
-          # Install all required system dependencies in a single command
           sudo apt-get install -y --no-install-recommends \
             libasound2t64 \
             libatk-bridge2.0-0 \
@@ -129,12 +143,9 @@ jobs:
             xvfb \
             x11-utils \
             x11-xserver-utils
-          
-          # Install Playwright system dependencies
           echo "Installing Playwright system dependencies..."
           npx playwright install --with-deps chromium
-          npx playwright install-deps
-          
+          # npx playwright install-deps  # redundant, already covered above
           echo "System dependencies installed successfully"
       
       - name: Install Test Dependencies
@@ -142,41 +153,36 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           echo "Setting up test-repo dependencies..."
-          
-          # Clean up previous installations
-          echo "Cleaning up previous installations..."
           rm -rf node_modules package-lock.json
-          
-          # Create a fresh package.json
           echo "Creating package.json..."
           node -e 'require("fs").writeFileSync("package.json", JSON.stringify({name:"bank-tests",version:"1.0.0",private:true,scripts:{test:"playwright test"},devDependencies:{"@playwright/test":"1.40.0","allure-playwright":"2.0.0"}}, null, 2) + "\n")'
-          
-          # Set npm registry and clean cache
-          echo "Configuring npm..."
           npm config set registry https://registry.npmjs.org/
           npm cache clean --force
-          
-          # Install dependencies
-          echo "Installing dependencies..."
           npm install --no-audit --no-fund --prefer-offline
-          
-          # Verify installation
           echo "Dependencies installed"
           echo "Installed packages:"
           npm list --depth=0
-          
-          # Install Playwright browsers (skip system dependencies as they're already installed)
           echo "Installing Playwright browsers..."
           npx playwright install chromium
           npx playwright --version
 
-      - name: Clone APP Repo
+      # Clone APP Repo with fallback for PAT
+      - name: Clone APP Repo (with PAT)
+        if: env.PAT != ''
         uses: actions/checkout@v4
         with:
           repository: ${{ env.APP_REPO }}
           ref: ${{ env.APP_BRANCH }}
           path: app-repo
-          token: ${{ secrets.PAT || github.token }}
+          token: ${{ env.PAT }}
+      - name: Clone APP Repo (with GITHUB_TOKEN)
+        if: env.PAT == ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.APP_REPO }}
+          ref: ${{ env.APP_BRANCH }}
+          path: app-repo
+          token: ${{ github.token }}
       
       - name: Setup Node.js for APP
         uses: actions/setup-node@v4
@@ -196,7 +202,6 @@ jobs:
       - name:  Setup Docker Configuration
         working-directory: ./app-repo
         run: |
-          # Check if docker-compose.yml exists
           if [ ! -f "docker-compose.yml" ]; then
             echo "  No docker-compose.yml found, creating one..."
             printf '%s\n' \
@@ -219,8 +224,6 @@ jobs:
           else
             echo " Found existing docker-compose.yml"
           fi
-          
-          # Check if Dockerfile exists
           if [ ! -f "Dockerfile" ]; then
             echo " No Dockerfile found, creating one..."
             printf '%s\n' \
@@ -236,7 +239,6 @@ jobs:
           else
             echo "Found existing Dockerfile"
           fi
-          
           echo "=== Docker Configuration ==="
           echo "Dockerfile:"
           cat Dockerfile
@@ -253,7 +255,6 @@ jobs:
           docker images | grep vuln-bank
       
       # ==================== START APP ====================
-      
       - name:  Start APP Container
         working-directory: ./app-repo
         run: |
@@ -282,11 +283,9 @@ jobs:
           echo "=== Testing Endpoints ==="
           echo "Main endpoint:"
           curl -v http://localhost:5001/ 2>&1 | head -20 || echo "Failed"
-          
           echo ""
           echo "Health endpoint:"
           curl -v http://localhost:5001/health 2>&1 || echo "  No health endpoint"
-          
           echo ""
           echo "API endpoint:"
           curl -v http://localhost:5001/api/ 2>&1 || echo " No API endpoint"
@@ -295,15 +294,15 @@ jobs:
         working-directory: ./test-repo
         run: |
           echo "Seeding database with fixture users..."
+          if [ ! -f tests/fixtures/users.json ]; then
+            echo "No users.json found, skipping seeding."
+            exit 0
+          fi
           node -e "
           const fs = require('fs');
           const http = require('http');
-          
-          // Read fixture users
           const users = JSON.parse(fs.readFileSync('tests/fixtures/users.json', 'utf8')).users;
           console.log('Found ' + users.length + ' users to seed');
-          
-          // Function to create user
           async function createUser(user) {
             return new Promise((resolve) => {
               const data = JSON.stringify({
@@ -311,7 +310,6 @@ jobs:
                 email: user.email,
                 password: user.password
               });
-              
               const options = {
                 hostname: 'localhost',
                 port: 5001,
@@ -322,7 +320,6 @@ jobs:
                   'Content-Length': data.length
                 }
               };
-              
               const req = http.request(options, (res) => {
                 let body = '';
                 res.on('data', (chunk) => body += chunk);
@@ -337,18 +334,14 @@ jobs:
                   resolve();
                 });
               });
-              
               req.on('error', (e) => {
                 console.log(' Error creating ' + user.username + ': ' + e.message);
                 resolve();
               });
-              
               req.write(data);
               req.end();
             });
           }
-          
-          // Seed all users
           (async () => {
             for (const user of users.slice(0, 10)) {
               await createUser(user);
@@ -366,7 +359,6 @@ jobs:
           docker compose logs --tail=100
       
       # ==================== RUN TESTS ====================
-      
       - name:  Run Tests
         working-directory: ./test-repo
         env:
@@ -383,32 +375,21 @@ jobs:
           echo "APP branch:    $APP_BRANCH"
           echo "Allure Results: $ALLURE_RESULTS_DIR"
           echo "================================================"
-          
-          # Create test results directory
           mkdir -p $ALLURE_RESULTS_DIR
-          
-          # Run tests with Allure reporting
           EXIT_CODE=0
           echo " Running $TEST_SUITE tests with Allure reporting..."
-          
-          # Run tests with Allure reporting and timeout
           echo " Starting tests..."
           timeout 15m npx playwright test tests/$TEST_SUITE/ \
             --reporter=line,allure-playwright \
             --output=$ALLURE_RESULTS_DIR \
             --workers=2 \
             --timeout=300000 || EXIT_CODE=$?
-            
           if [ $EXIT_CODE -eq 124 ]; then
             echo " Tests timed out after 15 minutes"
-            EXIT_CODE=0  # Don't fail the build on timeout
+            EXIT_CODE=0
           fi
-            
-          # List generated test results
           echo " Test results collected in: $ALLURE_RESULTS_DIR"
           find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
-          
-          # Set status based on test results and SOFT_MODE
           if [ $EXIT_CODE -ne 0 ]; then
             if [ "$SECURITY_SOFT" = "true" ]; then
               echo "  Tests found issues (SOFT mode - not failing build)"
@@ -419,31 +400,25 @@ jobs:
           else
             echo " Tests completed successfully"
           fi
-          
           exit $EXIT_CODE
       
       # ==================== DATABASE VALIDATION ====================
-      
       - name:  Validate Database (Check for Mass Assignment)
         if: always()
         working-directory: ./test-repo
+        continue-on-error: true
         run: |
           echo "=== Database Validation ==="
-          
-          # Try to find and validate the database
-          # First, try to copy from container
           CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E 'vuln|bank|app' | head -1)
-          
           if [ -n "$CONTAINER_NAME" ]; then
             echo "Found container: $CONTAINER_NAME"
-            node scripts/validate-db.js --container="$CONTAINER_NAME" || true
+            node scripts/validate-db.js --container="$CONTAINER_NAME"
           else
             echo "  No container found for database validation"
             echo "Skipping database validation (container not available)"
           fi
       
       # ==================== GENERATE REPORTS ====================
-      
       - name:  Generate Allure Report
         if: always()
         working-directory: ./test-repo
@@ -452,33 +427,20 @@ jobs:
           ALLURE_REPORT_DIR: ${{ env.ALLURE_REPORT_DIR }}
         run: |
           echo "=== Generating Allure Report ==="
-          
-          # Ensure directories exist
           mkdir -p "$ALLURE_RESULTS_DIR" "$ALLURE_REPORT_DIR"
-          
-          # Create a placeholder if no results found
           if [ -z "$(ls -A "$ALLURE_RESULTS_DIR/" 2>/dev/null)" ]; then
             echo '{"name": "No test results found", "status": "broken"}' > "$ALLURE_RESULTS_DIR/no-results.json"
             echo "  No test results found. Using placeholder."
           fi
-          
-          # Generate the report
           echo " Generating report from: $ALLURE_RESULTS_DIR"
-          # Clean previous report if exists
           rm -rf "$ALLURE_REPORT_DIR"
-          # Generate new report
           allure generate "$ALLURE_RESULTS_DIR" --clean -o "$ALLURE_REPORT_DIR"
-          
-          # Create a simple index if no report was generated
           if [ ! -f "$ALLURE_REPORT_DIR/index.html" ]; then
             echo " Creating placeholder index.html..."
             echo "<h1>Allure Report</h1><p>No test results found. Check the test run for details.</p>" > "$ALLURE_REPORT_DIR/index.html"
           fi
-          
-          # Ensure the report is accessible on GitHub Pages
           echo " Creating .nojekyll..."
           touch "$ALLURE_REPORT_DIR/.nojekyll"
-          
           echo " Report generated at: $ALLURE_REPORT_DIR"
           echo " Report directory contents:"
           ls -la "$ALLURE_REPORT_DIR"
@@ -486,23 +448,14 @@ jobs:
       - name:  Prepare GitHub Pages
         if: always()
         run: |
-          # Show current directory structure
           echo "Current directory structure:"
           ls -la
-          
-          # Show contents of ALLURE_REPORT_DIR
           echo "Contents of $ALLURE_REPORT_DIR:"
           ls -la "$ALLURE_REPORT_DIR/"
-          
-          # Create target directory if it doesn't exist
           rm -rf ./deploy-report
           mkdir -p ./deploy-report
-          
-          # Copy the report to the target directory
           echo "Copying report to deploy-report/"
           cp -R "$ALLURE_REPORT_DIR/." ./deploy-report/
-          
-          # Show what's being deployed
           echo "Contents of deploy-report/:"
           ls -la ./deploy-report/
       
@@ -511,7 +464,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ github.token }}
-          personal_token: ${{ secrets.PAT }}
+          # personal_token: ${{ secrets.PAT }}  # REMOVE, not a valid input
           publish_branch: gh-pages
           publish_dir: ./deploy-report
           force_orphan: true
@@ -523,7 +476,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo.split('/')[1]}/`
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/`
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -542,9 +495,9 @@ jobs:
             test-repo/playwright-report
             test-repo/test-results
           retention-days: 7
+          if-no-files-found: ignore
       
       # ==================== COLLECT LOGS ====================
-      
       - name:  Collect APP Logs
         if: always()
         working-directory: ./app-repo
@@ -567,13 +520,12 @@ jobs:
           retention-days: 30
       
       # ==================== CLEANUP ====================
-      
       - name:  Stop and Remove Containers
         if: always()
         working-directory: ./app-repo
         run: |
           echo "Stopping containers..."
-          docker compose down -v --remove-orphans
+          docker compose down -v --remove-orphans || true
           echo "Cleaning up Docker resources..."
           docker system prune -f
       
@@ -590,7 +542,6 @@ jobs:
           docker system df
       
       # ==================== SUMMARY ====================
-      
       - name:  Test Summary
         if: always()
         run: |
@@ -601,28 +552,18 @@ jobs:
           echo "| APP Repo | \`${{ env.APP_REPO }}@${{ env.APP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| SOFT Mode | \`${{ env.SOFT_MODE }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
-          
-          # Add report URL
           REPORT_URL="https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/"
-          
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "###  Test Results" >> $GITHUB_STEP_SUMMARY
           echo "- [View Allure Report]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-          
-          # Add test results summary if available
           if [ -d "test-repo/allure-results" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "###  Test Statistics" >> $GITHUB_STEP_SUMMARY
-            
-            # Count test results
             TOTAL_TESTS=$(find test-repo/allure-results -name "*.json" | wc -l)
             PASSED_TESTS=$(grep -r "status\":\"passed\"" test-repo/allure-results | wc -l || echo 0)
             FAILED_TESTS=$(grep -r "status\":\"failed\"" test-repo/allure-results | wc -l || echo 0)
-            
             echo "-  Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
             echo "-  Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
             echo "-  Total: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
           fi
-          
-      # (Removed duplicate PAT-based gh-pages deployment and duplicate summary)

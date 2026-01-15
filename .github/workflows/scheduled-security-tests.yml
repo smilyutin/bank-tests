@@ -16,45 +16,9 @@ on:
 
 jobs:
   run-security-tests:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write  # Required to trigger workflow_dispatch
-      contents: read
-    
-    steps:
-      - name: Check for PAT secret
-        run: |
-          if [ -z "${{ secrets.PAT }}" ]; then
-            echo "ERROR: secrets.PAT is not set for this workflow run."
-            echo "Add a PAT with repo access (and Actions write) in repo settings: Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-
-      - name: Trigger Main Test Workflow
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.PAT }}
-          script: |
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'test-vuln-bank.yml',
-              // Dispatch against the branch that contains the workflow definition.
-              ref: 'dev',
-              inputs: {
-                app_branch: '${{ inputs.app_branch || 'main' }}',
-                soft_mode: 'false',  // Use HARD mode for scheduled tests
-                test_suite: 'security'
-              }
-            });
-            
-            console.log('Triggered security test workflow');
-            
-            // Post to Slack or other notification system here if needed
-            // Example:
-            // await fetch(process.env.SLACK_WEBHOOK, {
-            //   method: 'POST',
-            //   body: JSON.stringify({
-            //     text: 'Scheduled security tests started'
-            //   })
-            // });
+    uses: ./.github/workflows/test-vuln-bank.yml
+    with:
+      app_branch: ${{ github.event.inputs.app_branch || 'main' }}
+      soft_mode: 'false'
+      test_suite: 'security'
+    secrets: inherit

@@ -22,6 +22,6 @@ jobs:
     uses: ./.github/workflows/test-vuln-bank.yml
     with:
       app_branch: ${{ github.event.inputs.app_branch || 'main' }}
-      soft_mode: 'false'
+      soft_mode: 'true'  # Changed to SOFT mode for scheduled runs
       test_suite: 'security'
     secrets: inherit

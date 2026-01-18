@@ -1,0 +1,3 @@
+
+⏭️ Mass assignment: creating user should not allow role assignment
+   Reason: Test skipped: No user-create endpoint found to test role mass assignment

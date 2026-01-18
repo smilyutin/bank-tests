@@ -1,0 +1,3 @@
+
+⏭️ Audit: security posture trending positively
+   Reason: Test skipped: Insufficient history for trend analysis (need at least 3 runs)

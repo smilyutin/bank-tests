@@ -1,0 +1,2 @@
+
+✅ Regression: SQL injection protection active

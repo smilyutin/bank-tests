@@ -1,0 +1,3 @@
+
+⏭️ Mass assignment: creating user should not allow isAdmin=true
+   Reason: Test skipped: No user-create endpoint found to test mass assignment

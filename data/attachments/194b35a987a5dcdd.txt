@@ -1,0 +1,123 @@
+[mass-assign] Resolved auth headers: {"Content-Type":"application/json"}
+[mass-assign] No auth obtained via API; attempting UI login fallback
+[ui-login] Visiting http://localhost:5001/login => 200
+[ui-login] Visiting http://localhost:5001/signin => 404
+[ui-login] Visiting http://localhost:5001/auth => 404
+[ui-login] Visiting http://localhost:5001/auth/login => 404
+[ui-login] Visiting http://localhost:5001/auth/signin => 404
+[ui-login] Visiting http://localhost:5001/register => 200
+[mass-assign] Attempt POST /api/virtual-cards/create => status=401
+[mass-assign] Response (truncated 2000 chars): {
+  "error": "Token is missing"
+}
+
+
+⚠️ Mass assignment: creating virtual card should not allow sensitive fields
+[mass-assign] Attempt PUT /api/virtual-cards/create => status=401
+[mass-assign] Response (truncated 2000 chars): {
+  "error": "Token is missing"
+}
+
+
+⚠️ Mass assignment: creating virtual card should not allow sensitive fields
+[mass-assign] Attempt PATCH /api/virtual-cards/create => status=401
+[mass-assign] Response (truncated 2000 chars): {
+  "error": "Token is missing"
+}
+
+
+⚠️ Mass assignment: creating virtual card should not allow sensitive fields
+[mass-assign] Attempt POST /api/virtual-cards => status=405
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>405 Method Not Allowed</title>
+<h1>Method Not Allowed</h1>
+<p>The method is not allowed for the requested URL.</p>
+
+[mass-assign] Attempt PUT /api/virtual-cards => status=405
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>405 Method Not Allowed</title>
+<h1>Method Not Allowed</h1>
+<p>The method is not allowed for the requested URL.</p>
+
+[mass-assign] Attempt PATCH /api/virtual-cards => status=405
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>405 Method Not Allowed</title>
+<h1>Method Not Allowed</h1>
+<p>The method is not allowed for the requested URL.</p>
+
+[mass-assign] Attempt POST /api/virtual-cards/ => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PUT /api/virtual-cards/ => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PATCH /api/virtual-cards/ => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt POST /virtual-cards/create => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PUT /virtual-cards/create => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PATCH /virtual-cards/create => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt POST /virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PUT /virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PATCH /virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt POST /api/v1/virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PUT /api/v1/virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+[mass-assign] Attempt PATCH /api/v1/virtual-cards => status=404
+[mass-assign] Response (truncated 2000 chars): <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+
+⚠️ Mass assignment: creating virtual card should not allow sensitive fields
+
+⚠️ Mass assignment: creating virtual card should not allow sensitive fields

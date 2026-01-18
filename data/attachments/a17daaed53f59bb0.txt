@@ -1,0 +1,3 @@
+
+⏭️ Escape Chars: path traversal sequences blocked
+   Reason: Test skipped: No endpoints found for path traversal testing

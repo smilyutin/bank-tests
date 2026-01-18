@@ -1,0 +1,2 @@
+
+✅ Malformed JSON: deeply nested structures handled safely

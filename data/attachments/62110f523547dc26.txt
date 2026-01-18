@@ -1,0 +1,2 @@
+
+✅ Injection (OWASP API8): SQL/command injection probe should not return server error

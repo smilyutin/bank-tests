@@ -1,0 +1,3 @@
+
+⏭️ Regression: IDOR/BOLA protection functional
+   Reason: Test skipped: No protected resources found for IDOR testing

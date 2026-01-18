@@ -1,0 +1,3 @@
+
+⏭️ Token Expiration: expired tokens rejected
+   Reason: Test skipped: No registration endpoint found for token testing

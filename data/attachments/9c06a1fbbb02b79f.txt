@@ -1,0 +1,3 @@
+
+⏭️ Excessive Data Exposure: API should not expose tokens or secrets
+   Reason: Test skipped: No user listing endpoint found to check for token exposure

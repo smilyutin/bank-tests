@@ -1,0 +1,3 @@
+
+⏭️ Excessive Data Exposure: GET user should not return sensitive fields (password)
+   Reason: Test skipped: No user listing endpoint found to check for excessive data exposure

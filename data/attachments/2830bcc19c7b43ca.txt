@@ -1,0 +1,11 @@
+[error-handling] POST /api/virtual-cards/create => 401
+
+✅ API should return 4xx for invalid fields, not 500 with stack traces
+[error-handling] POST /api/users => 404
+[error-handling] POST /api/login => 500
+
+❌ API should return 4xx for invalid fields, not 500 with stack traces
+   Risk: MEDIUM | API7:2023 - Server Side Request Forgery
+
+❌ API should return 4xx for invalid fields, not 500 with stack traces
+   Risk: MEDIUM | API7:2023 - Server Side Request Forgery

@@ -1,0 +1,2 @@
+
+✅ Malformed JSON: user creation endpoint handles invalid JSON

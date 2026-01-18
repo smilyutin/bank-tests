@@ -1,0 +1,2 @@
+
+✅ Unicode: homograph attacks detected

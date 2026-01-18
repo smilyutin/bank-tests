@@ -1,0 +1,2 @@
+
+✅ Boundary Values: null and undefined handled safely

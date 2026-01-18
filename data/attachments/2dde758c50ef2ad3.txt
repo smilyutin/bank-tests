@@ -1,0 +1,2 @@
+
+✅ Fuzzing: user creation endpoint handles random inputs

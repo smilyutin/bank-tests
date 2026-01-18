@@ -1,0 +1,3 @@
+
+⏭️ Token Lifecycle: reasonable expiration times
+   Reason: Test skipped: Could not obtain JWT token for expiration check

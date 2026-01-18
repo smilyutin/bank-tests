@@ -1,0 +1,3 @@
+
+⏭️ Regression: sensitive data not exposed in responses
+   Reason: Test skipped: No user endpoints found for sensitive data check

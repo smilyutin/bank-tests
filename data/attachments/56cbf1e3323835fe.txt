@@ -1,0 +1,25 @@
+[mass-assign] Resolved auth headers: {"Content-Type":"application/json"}
+[mass-assign] No auth obtained via API; attempting UI login fallback
+[ui-login] Visiting http://localhost:5001/login => 200
+[mass-assign] Obtained cookies via UI login
+[mass-assign] Attempt POST /api/virtual-cards/create => status=200
+[mass-assign] Response (truncated 2000 chars): {
+  "card_details": {
+    "card_number": "3651897617331816", 
+    "cvv": "880", 
+    "expiry_date": "01/27", 
+    "limit": 1000.0, 
+    "type": "standard"
+  }, 
+  "message": "Virtual card created successfully", 
+  "status": "success"
+}
+
+
+✅ Mass assignment: creating virtual card should not allow sensitive fields
+[mass-assign] update-limit POST /api/virtual-cards/1/update-limit => status=500
+[mass-assign] update-limit response (truncated): {
+  "message": "syntax error at or near \"limit\"\nLINE 3:             SET limit = 5000000.0, ownerId = 'attacker-owner...\n                        ^\n", 
+  "status": "error"
+}
+

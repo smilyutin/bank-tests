@@ -337,7 +337,9 @@ npm run allure:serve
 ```yaml
 # GitHub Actions
 name: Security Tests
-on: [push, pull_request, schedule]
+on:
+  # Manual trigger (keep automation off until the target app is hardened)
+  workflow_dispatch:
 
 jobs:
   security:

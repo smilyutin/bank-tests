@@ -7,7 +7,7 @@ Your CI/CD is **ready to use!** Here's what was set up:
 ### Files Created
 
 1. ✅ `.github/workflows/test-vuln-bank.yml` - Main workflow
-2. ✅ `.github/workflows/scheduled-security-tests.yml` - Scheduled tests
+2. ✅ (No scheduled workflow) - Manual runs only
 3. ✅ `PIPELINE-IMPLEMENTATION.md` - Complete guide
 4. ✅ `QUICK-START.md` - This file
 
@@ -47,7 +47,7 @@ git push origin main
 
 Visit: https://github.com/smilyutin/bank-tests/actions
 
-You should see workflow running automatically! ✅
+Trigger the workflow manually (automatic runs are intentionally disabled). ✅
 
 ### Step 3: Or Trigger Manually
 
@@ -147,11 +147,13 @@ gh workflow run test-vuln-bank.yml \
 
 ### Automatic Triggers
 
-Tests run automatically on:
-- ✅ Push to `main` branch (test repo)
-- ✅ Push to `develop` branch (test repo)
-- ✅ Pull requests to `main` (test repo)
-- ⏰ Nightly at 2 AM UTC
+Automatic triggers are **disabled by default** in this repo to avoid noisy red runs while the target app is knowingly insecure.
+
+To run tests, use:
+- **Manual** GitHub Actions trigger (`workflow_dispatch`), or
+- The main workflow: `test-vuln-bank.yml` via manual trigger.
+
+When you’re ready to re-enable automation later, add `push`, `pull_request`, and/or `schedule` triggers back into `.github/workflows/test-vuln-bank.yml`.
 
 ---
 

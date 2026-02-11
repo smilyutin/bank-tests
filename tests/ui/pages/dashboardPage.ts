@@ -105,7 +105,9 @@ export class DashboardPage {
       '[data-testid*="transactions"]',
       'table:has-text("transactions")',
       '.transactions',
-      '#transactions'
+      '#transactions',
+      '.transaction-list',
+      '.transaction-history'
     ];
     for (const selector of txnSelectors) {
       const el = this.page.locator(selector);
@@ -116,13 +118,90 @@ export class DashboardPage {
           return rows.all();
         }
         // If it's a list, get items
-        const items = el.locator('li');
+        const items = el.locator('li, .transaction-item');
         if (await items.count()) {
           return items.all();
         }
       }
     }
     return [];
+  }
+
+  async getTransactionData() {
+    const transactions = await this.getRecentTransactions();
+    const txnData = [];
+    
+    for (const txn of transactions) {
+      const text = await txn.innerText();
+      // Extract transaction details
+      const amountMatch = text.match(/[$€£]?\s*(\d+(\.\d{2})?)/);
+      const dateMatch = text.match(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/);
+      
+      txnData.push({
+        text,
+        amount: amountMatch ? parseFloat(amountMatch[1]) : null,
+        date: dateMatch ? dateMatch[0] : null,
+        element: txn
+      });
+    }
+    
+    return txnData;
+  }
+
+  async verifyBalanceAccuracy() {
+    // Get displayed balance
+    const displayedBalance = await this.getAccountBalance();
+    
+    // Try to verify against API if available
+    try {
+      const apiResponse = await this.page.request.get('/api/account/balance');
+      if (apiResponse.ok()) {
+        const apiData = await apiResponse.json();
+        const apiBalance = apiData.balance || apiData.amount || apiData.value;
+        
+        return {
+          displayed: displayedBalance,
+          api: apiBalance,
+          matches: Math.abs((displayedBalance || 0) - (apiBalance || 0)) < 0.01
+        };
+      }
+    } catch (e) {
+      // API might not be available
+    }
+    
+    return {
+      displayed: displayedBalance,
+      api: null,
+      matches: null
+    };
+  }
+
+  async checkSessionTimeout(timeoutMs: number = 30000) {
+    const startTime = Date.now();
+    
+    // Leave headroom so the test itself doesn't hit the global timeout
+    const safeWaitMs = Math.max(0, timeoutMs - 2000);
+    if (safeWaitMs > 0) {
+      await this.page.waitForTimeout(safeWaitMs);
+    }
+    
+    // Check if session is still valid
+    try {
+      await this.page.reload();
+      const isStillLoggedIn = await this.isLoggedIn();
+      
+      return {
+        timeElapsed: Date.now() - startTime,
+        sessionValid: isStillLoggedIn,
+        currentUrl: this.page.url()
+      };
+    } catch (e) {
+      return {
+        timeElapsed: Date.now() - startTime,
+        sessionValid: false,
+        error: e
+      };
+    }
   }
 
   async logout() {

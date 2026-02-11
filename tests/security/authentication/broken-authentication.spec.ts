@@ -116,3 +116,146 @@ test('Broken authentication: enumeration protection on login', async ({ request 
     );
   }
 });
+
+// 🔴 CRITICAL SECURITY TESTS - Authentication Bypass (Priority #1)
+test('Authentication bypass: direct dashboard access without credentials', async ({ page }, testInfo) => {
+  // Clear any existing authentication
+  await page.context().clearCookies();
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  // Attempt direct dashboard access
+  const response = await page.goto('/dashboard');
+  const finalUrl = page.url();
+
+  // Should redirect to login or return 401/403
+  const isBlocked = finalUrl.includes('/login') || 
+                   finalUrl.includes('/auth') || 
+                   response?.status() === 401 || 
+                   response?.status() === 403;
+
+  softCheck(
+    testInfo,
+    isBlocked,
+    'CRITICAL: Dashboard accessible without authentication - implement proper access controls'
+  );
+});
+
+test('Authentication bypass: JWT token manipulation', async ({ page }, testInfo) => {
+  const user = await ensureTestUser(page.request as any);
+  if (!user.email || !user.password) {
+    test.skip(true, 'No user configured');
+    return;
+  }
+
+  // Login normally first
+  await page.goto('/login');
+  await page.fill('[name="email"], [type="email"]', user.email);
+  await page.fill('[name="password"], [type="password"]', user.password);
+  await page.click('[type="submit"], button[type="submit"]');
+  
+  // Check if JWT is stored in localStorage
+  const token = await page.evaluate(() => {
+    const keys = ['token', 'authToken', 'jwt', 'accessToken'];
+    for (const key of keys) {
+      const value = localStorage.getItem(key);
+      if (value && value.includes('.')) return value;
+    }
+    return null;
+  });
+
+  if (token) {
+    // Test tampered token
+    const tamperedToken = token.substring(0, -10) + 'TAMPERED123';
+    await page.evaluate((newToken) => {
+      const keys = ['token', 'authToken', 'jwt', 'accessToken'];
+      keys.forEach(key => {
+        if (localStorage.getItem(key)) {
+          localStorage.setItem(key, newToken);
+        }
+      });
+    }, tamperedToken);
+
+    // Try to access dashboard with tampered token
+    const response = await page.goto('/dashboard');
+    const finalUrl = page.url();
+
+    const isTokenValidated = finalUrl.includes('/login') || 
+                            finalUrl.includes('/auth') || 
+                            response?.status() === 401;
+
+    softCheck(
+      testInfo,
+      isTokenValidated,
+      'CRITICAL: Tampered JWT tokens accepted - implement proper signature verification'
+    );
+  }
+});
+
+// 🔴 XSS Prevention Tests
+test('XSS prevention: user data sanitization in dashboard', async ({ page }, testInfo) => {
+  const user = await ensureTestUser(page.request as any);
+  if (!user.email || !user.password) {
+    test.skip(true, 'No user configured');
+    return;
+  }
+
+  // Login first
+  await page.goto('/login');
+  await page.fill('[name="email"], [type="email"]', user.email);
+  await page.fill('[name="password"], [type="password"]', user.password);
+  await page.click('[type="submit"], button[type="submit"]');
+  await page.waitForTimeout(3000);
+
+  // Check for XSS in welcome message or user data display
+  const pageContent = await page.content();
+  const dangerousPatterns = [
+    /<script[^>]*>.*?<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi, // onclick, onload, etc.
+    /<iframe[^>]*>/gi,
+    /<object[^>]*>/gi,
+    /<embed[^>]*>/gi
+  ];
+
+  let xssFound = false;
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(pageContent)) {
+      xssFound = true;
+      break;
+    }
+  }
+
+  if (xssFound) {
+    testInfo.annotations.push({
+      type: 'security-warning',
+      description: 'Potential XSS vulnerability detected in dashboard content'
+    });
+  }
+
+  // Test XSS in user profile update (if endpoint exists)
+  try {
+    const xssPayload = '<script>alert("XSS")</script>';
+    const profileResponse = await page.request.post('/api/profile', {
+      data: { name: xssPayload, bio: xssPayload }
+    }).catch(() => null);
+    
+    if (profileResponse && profileResponse.status() < 400) {
+      // Reload page and check if script is executed
+      await page.reload();
+      const updatedContent = await page.content();
+      
+      const scriptExecuted = updatedContent.includes('<script>alert("XSS")</script>');
+      
+      softCheck(
+        testInfo,
+        !scriptExecuted,
+        'CRITICAL: XSS vulnerability in user profile data - implement proper input sanitization'
+      );
+    }
+  } catch (e) {
+    // Profile endpoint might not exist
+  }
+});

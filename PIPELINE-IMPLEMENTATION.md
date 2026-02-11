@@ -20,7 +20,7 @@
 bank-tests/
 └── .github/workflows/
     ├── test-vuln-bank.yml              ✅ CREATED - Main workflow
-    └── scheduled-security-tests.yml    ✅ CREATED - Scheduled tests
+  └── (no scheduled workflow)         ✅ Manual runs only
 ```
 
 ### Files Already Configured
@@ -38,7 +38,7 @@ bank-tests/
 ### Workflow Execution Flow
 
 ```
-1. 🎬 Trigger (push/PR/manual/schedule)
+1. 🎬 Trigger (manual)
         ↓
 2. 📥 Clone Test Repo (smilyutin/bank-tests)
         ↓
@@ -106,18 +106,12 @@ bank-tests/
 
 ---
 
-### Test 2: Automatic Trigger (Push to Test Repo)
+### Note on Automatic Triggers
 
-1. **Make a change in Test repo:**
-   ```bash
-   cd /Users/minime/Projects/bank-tests
-   
-   # Make any change to tests
-   echo "// Test trigger" >> tests/security/README.md
-   
-   git add .
-   git commit -m "Test: Trigger CI workflow"
-   git push origin main
+Automatic triggers (push/PR/schedule) are intentionally **disabled** in this repo so commits don’t spam red CI runs while the target app is known to be insecure.
+
+To run tests:
+- Use the **manual** GitHub Actions “Run workflow” button.
    ```
 
 2. **Check GitHub Actions:**
@@ -579,7 +573,7 @@ Add to workflow (after tests):
 - [ ] playwright.config.ts has BASE_URL support
 - [ ] package.json has test scripts
 - [ ] Manual trigger works
-- [ ] Automatic trigger works (push to test repo)
+- [ ] No automatic triggers enabled (by design)
 - [ ] APP builds successfully
 - [ ] APP starts and responds
 - [ ] Tests run and complete
@@ -624,9 +618,8 @@ Add to workflow (after tests):
 ## 🎉 Summary
 
 **What You Have:**
-- ✅ Automated testing on every push
 - ✅ Manual trigger with options
-- ✅ Scheduled nightly tests
+- ✅ No scheduled runs (by design)
 - ✅ SOFT mode by default (non-blocking)
 - ✅ Complete test reports
 - ✅ Automatic cleanup

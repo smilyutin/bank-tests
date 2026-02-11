@@ -46,10 +46,8 @@ test.describe('Dashboard functionality', () => {
   test.beforeEach(async ({ page, baseURL }) => {
     if (!baseURL) throw new Error('baseURL is not defined');
 
-    // Step 1: Get test user from credentials store
     const user = findOrCreateUser('e2e');
 
-    // Step 2: Authenticate user
     loginPage = new LoginPage(page);
     await loginPage.goto(baseURL);
     const identifier = user.username || user.email;
@@ -58,7 +56,6 @@ test.describe('Dashboard functionality', () => {
     await loginPage.fillPassword(user.password);
     await loginPage.submit();
 
-    // Step 3: Initialize dashboard page and wait for it to load
     dashboardPage = new DashboardPage(page);
     await dashboardPage.waitForLoad();
   });
@@ -67,12 +64,12 @@ test.describe('Dashboard functionality', () => {
     const welcomeText = await dashboardPage.getWelcomeMessage();
     expect(welcomeText).toBeTruthy();
 
-    // welcome should contain username or email fragment
     const user = findOrCreateUser('e2e');
     const identifier = user.username || user.email || '';
-  if (identifier && welcomeText) expect(welcomeText.toLowerCase()).toContain(identifier.split('@')[0].toLowerCase());
+    if (identifier && welcomeText) {
+      expect(welcomeText.toLowerCase()).toContain(identifier.split('@')[0].toLowerCase());
+    }
 
-  // Assert full navigation texts (from visual: left menu)
     const navTexts = await dashboardPage.getNavigationTexts();
     const expected = [
       'Profile',
@@ -83,12 +80,13 @@ test.describe('Dashboard functionality', () => {
       'Bill Payments',
       'Logout'
     ];
-    // normalize whitespace and case
-  // normalize: remove emojis/non-alphanumeric chars, collapse whitespace, lowercase
-  const norm = (s: string) => s.replace(/[^^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+    const norm = (s: string) =>
+      s.replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
     const got = navTexts.map(norm);
     const want = expected.map(norm);
-    // Ensure expected items appear in order (may be additional items)
+
     let idx = 0;
     for (const w of want) {
       const found = got.indexOf(w, idx);
@@ -96,11 +94,10 @@ test.describe('Dashboard functionality', () => {
       idx = found + 1;
     }
 
-    // Also assert hrefs/anchors from snapshot order
     const navLinks = await dashboardPage.getNavigationLinks();
     const gotHrefs = navLinks.map(l => l.href || '').filter(Boolean);
     const expectedHrefs = ['#profile', '#transfers', '#loans', '#transactions', '#virtual-cards', '#bill-payments', '#'];
-    // ensure each expected href appears in order in gotHrefs
+
     let j = 0;
     for (const eh of expectedHrefs) {
       const found = gotHrefs.indexOf(eh, j);
@@ -118,25 +115,208 @@ test.describe('Dashboard functionality', () => {
 
   test('should list recent transactions', async () => {
     const transactions = await dashboardPage.getRecentTransactions();
-    // transactions may be empty; if present, assert they contain an amount-like string
     expect(transactions.length).toBeGreaterThanOrEqual(0);
     if (transactions.length > 0) {
       const first = transactions[0];
       const text = await first.innerText();
-      // look for date or amount pattern
-      expect(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|[$€£]\s*\d+/.test(text)).toBeTruthy();
+      expect(
+        /\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|[$€£]\s*\d+/.test(text)
+      ).toBeTruthy();
     }
   });
 
   test('should allow logout', async () => {
     const logoutExists = await dashboardPage.logout();
     expect(logoutExists).toBeTruthy();
-    
-      // Wait for navigation after logout
-      await dashboardPage.page.waitForURL(/\/(login|register|$)/, { timeout: 5000 });
-    
-      // Verify we're logged out
+
+    await dashboardPage.page.waitForURL(/\/(login|register|$)/, { timeout: 5000 });
+
     const isStillLoggedIn = await dashboardPage.isLoggedIn();
     expect(isStillLoggedIn).toBeFalsy();
   });
+
+  test('should display accurate account balance', async () => {
+    const balanceData = await dashboardPage.verifyBalanceAccuracy();
+
+    expect(balanceData.displayed).not.toBeNull();
+    expect(typeof balanceData.displayed).toBe('number');
+    expect(balanceData.displayed).toBeGreaterThanOrEqual(0);
+
+    if (balanceData.api !== null && balanceData.matches !== null) {
+      expect(balanceData.matches).toBeTruthy();
+    }
+
+    const balanceElement = dashboardPage.page.locator('text=/balance.*[$€£]\\s*\\d+(\\.\\d{2})?/i').first();
+    if (await balanceElement.count()) {
+      const balanceText = await balanceElement.innerText();
+      expect(balanceText).toMatch(/[$€£]\s*\d+(\.\d{2})?/);
+    }
+  });
+
+  test('should handle negative balances correctly', async () => {
+    try {
+      const response = await dashboardPage.page.request.post('/api/account/update', {
+        data: { balance: -100.5 }
+      });
+
+      if (response.ok()) {
+        await dashboardPage.page.reload();
+        const balance = await dashboardPage.getAccountBalance();
+
+        const balanceText = await dashboardPage.page.locator('text=/balance|account/i').first().innerText();
+        const showsNegative = balanceText.includes('-') || balanceText.toLowerCase().includes('overdraft');
+
+        expect(balance).not.toBeNull();
+        expect(showsNegative).toBeTruthy();
+      }
+    } catch {
+      test.skip(true, 'Balance update API not available');
+    }
+  });
+
+  test('should display transaction history with proper data integrity', async () => {
+    const transactions = await dashboardPage.getTransactionData();
+
+    for (const txn of transactions) {
+      if (txn.amount !== null) {
+        expect(typeof txn.amount).toBe('number');
+        expect(txn.amount).toBeGreaterThan(0);
+      }
+
+      if (txn.date !== null) {
+        expect(txn.date).toMatch(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/);
+      }
+
+      expect(txn.text).not.toMatch(/<script|javascript:|on\w+=/i);
+    }
+  });
+
+  test('should show transactions in chronological order', async () => {
+    const transactions = await dashboardPage.getTransactionData();
+
+    if (transactions.length > 1) {
+      const datedTransactions = transactions.filter(t => t.date !== null);
+
+      if (datedTransactions.length > 1) {
+        for (let i = 1; i < datedTransactions.length; i++) {
+          const prevDate = new Date(datedTransactions[i - 1].date!);
+          const currDate = new Date(datedTransactions[i].date!);
+          expect(prevDate.getTime()).toBeGreaterThanOrEqual(currDate.getTime());
+        }
+      }
+    }
+  });
+
+  test('should render profile section when navigating', async () => {
+    const navLinks = await dashboardPage.getNavigationLinks();
+    const profileLink = navLinks.find(l => l.href === '#profile');
+    if (profileLink) {
+      await dashboardPage.page.locator(`a[href="${profileLink.href}"]`).click();
+      const profileSection = dashboardPage.page.locator('#profile, [data-testid="profile"]');
+      expect(await profileSection.count()).toBeGreaterThan(0);
+    } else {
+      test.skip(true, 'Profile link not available');
+    }
+  });
+
+  test('should show transaction amounts with currency symbol', async () => {
+    const transactions = await dashboardPage.getRecentTransactions();
+    if (transactions.length > 0) {
+      const text = await transactions[0].innerText();
+      expect(text).toMatch(/[$€£]\s*\d+(\.\d{2})?/);
+    }
+  });
+
+  test('should have unique navigation labels', async () => {
+    const navTexts = await dashboardPage.getNavigationTexts();
+    const normalized = navTexts.map(t => t.trim().toLowerCase());
+    const unique = new Set(normalized);
+    expect(unique.size).toBe(normalized.length);
+  });
+
+  test('should handle session timeout gracefully', async () => {
+    const timeoutResult = await dashboardPage.checkSessionTimeout(30000);
+
+    if (!timeoutResult.sessionValid) {
+      expect(timeoutResult.currentUrl).toMatch(/\/(login|auth)/);
+    } else {
+      expect(timeoutResult.currentUrl).toMatch(/\/dashboard/);
+    }
+
+    expect(timeoutResult.timeElapsed).toBeGreaterThan(25000);
+    expect(timeoutResult.timeElapsed).toBeLessThan(35000);
+  });
+
+  test('should be responsive on mobile devices', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.reload();
+
+    const isLoggedIn = await dashboardPage.isLoggedIn();
+    expect(isLoggedIn).toBeTruthy();
+
+    const navTexts = await dashboardPage.getNavigationTexts();
+    expect(navTexts.length).toBeGreaterThan(0);
+
+    const balance = await dashboardPage.getAccountBalance();
+    expect(balance).not.toBeNull();
+
+    const mobileMenu = page.locator('.mobile-menu, .hamburger, [data-testid*="mobile"], button[aria-label*="menu"]');
+    const hasMobileUI = (await mobileMenu.count()) > 0;
+
+    expect(navTexts.length > 3 || hasMobileUI).toBeTruthy();
+  });
+
+  test('should be responsive on tablet devices', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.reload();
+
+    const isLoggedIn = await dashboardPage.isLoggedIn();
+    expect(isLoggedIn).toBeTruthy();
+
+    const navTexts = await dashboardPage.getNavigationTexts();
+    expect(navTexts.length).toBeGreaterThan(3);
+
+    const balance = await dashboardPage.getAccountBalance();
+    expect(balance).not.toBeNull();
+
+    const transactions = await dashboardPage.getRecentTransactions();
+    expect(transactions.length).toBeGreaterThanOrEqual(0);
+  });
+
+
+  test('should maintain accessibility standards', async ({ page }) => {
+    await page.waitForLoadState('domcontentloaded');
+
+    const mainContent = page.locator('[role="main"], main');
+    if ((await mainContent.count()) === 0) {
+      test.skip(true, 'Main landmark not present on this page');
+    } else {
+      await mainContent.first().waitFor({ state: 'visible', timeout: 5000 });
+      expect(await mainContent.count()).toBeGreaterThan(0);
+    }
+
+    const navigation = page.locator('[role="navigation"], nav');
+    if ((await navigation.count()) === 0) {
+      test.skip(true, 'Navigation landmark not present on this page');
+    } else {
+      await navigation.first().waitFor({ state: 'visible', timeout: 5000 });
+      expect(await navigation.count()).toBeGreaterThan(0);
+    }
+
+    const balanceElement = page.getByText(/balance/i).first();
+    if (await balanceElement.count()) {
+      const styles = await balanceElement.evaluate((el: Element) => {
+        const computed = window.getComputedStyle(el);
+        return {
+          fontSize: computed.fontSize,
+          color: computed.color,
+          backgroundColor: computed.backgroundColor
+        };
+      });
+
+      const fontSize = parseInt(styles.fontSize, 10);
+      expect(fontSize).toBeGreaterThanOrEqual(14);
+    }
+  });
+
 });

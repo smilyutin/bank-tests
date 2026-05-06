@@ -1,4 +1,7 @@
+import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
+
+const isHeadless = process.env.HEADLESS?.toLowerCase() === 'false' ? false : true;
 
 export default defineConfig({
   testDir: './tests',
@@ -39,7 +42,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:5001',
-    headless: true,
+    headless: isHeadless,
     ignoreHTTPSErrors: true,
     viewport: { width: 1280, height: 720 },
     actionTimeout: 10000,

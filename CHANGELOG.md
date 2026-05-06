@@ -94,7 +94,7 @@ This release transforms the test suite into a comprehensive enterprise-grade sec
 
 - `allure-playwright@^3.4.1` - Allure reporting integration
 
-### 🔧 Enhanced
+### Enhanced
 
 **Existing Security Tests**
 - Added SecurityReporter to 5 API Top 10 tests in `api-10/api-top10.spec.ts`
@@ -155,11 +155,11 @@ Complete OWASP API Security Top 10 2023 coverage:
 
 **Reporting**
 - All tests now use SecurityReporter for consistent reporting
-- Console output includes emoji status indicators (✅ ❌ ⚠️ ⏭️)
+- Console output includes emoji status indicators
 - Test results automatically tagged with OWASP categories
 - Allure reports include severity levels and historical tracking
 
-### 🚀 Migration Guide
+### Migration Guide
 
 For existing tests, add SecurityReporter integration:
 
@@ -237,7 +237,7 @@ None. All existing tests remain functional. New SecurityReporter integration is 
 
 **Legend:**
 - ✨ New feature
-- 🔧 Enhancement
+- Enhancement
 - 🐛 Bug fix
 - 📚 Documentation
 - 🔄 Changed

@@ -1,5 +1,14 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+
+const TARGET_APP_FIX_FIRST = [
+  'What to fix in the target app first (priority order):',
+  '1) Enforce request body size limits at API gateway/reverse proxy and app middleware',
+  '2) Return explicit 413 Payload Too Large when limits are exceeded',
+  '3) Ensure large payload handling cannot trigger 5xx or excessive processing time',
+  '4) Add request size policy documentation and monitoring alerts for abuse spikes',
+];
 
 /**
  * Payload Size Abuse Tests
@@ -37,8 +46,10 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * 3. Verify the server rejects it with appropriate status code
  */
 test('Payload size: server rejects oversized payloads', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   if (!user.email) {
+    reporter.reportSkip('No persisted user');
     test.skip(true, 'No persisted user');
     return;
   }
@@ -55,6 +66,7 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
   // Step 2: Verify login endpoint exists for testing
   const attempt = await tryLogin(request as any, user.email!, user.password!);
   if (!attempt) {
+    reporter.reportSkip('Login endpoint not found');
     test.skip(true, 'Login endpoint not found');
     return;
   }
@@ -63,6 +75,8 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
 
   // Step 3: Attempt to send the oversized payload
   // This tests if the server properly validates request size
+  let networkRejected = false;
+  let networkRejectionReason = '';
   try {
     const res = await request.post(path, {
       data: oversizedPayload,
@@ -70,22 +84,62 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
     });
 
     const status = res.status();
+    const statusSummary = `[${status}]`;
     // Step 4: Verify server rejects oversized payloads
     // Expected responses: 413 (Payload Too Large), 400 (Bad Request), or 5xx (Server Error)
     const rejected = status === 413 || status === 400 || status >= 500;
-    
-    softCheck(
-      testInfo,
-      rejected,
-      `Server did not reject oversized payload (status: ${status}). Expected 413 or 400.`
-    );
+
+    if (rejected) {
+      const isIdeal = status === 413;
+      reporter.reportPass(
+        `System is protected against oversized payload abuse: endpoint ${path} rejected a 10MB payload with status ${status}. ` +
+        `Observed status progression: ${statusSummary}. ` +
+        (isIdeal
+          ? 'The explicit 413 response confirms payload size enforcement is active and predictable.'
+          : 'Request was rejected, which reduces DoS risk, but using explicit 413 would improve API behavior and observability.'),
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    } else {
+      reporter.reportWarning(
+        `Oversized payload may be accepted: endpoint ${path} returned status ${status} for a 10MB request. ` +
+        `Observed status progression: ${statusSummary}. ` +
+        `Risk: attackers can submit very large bodies to consume memory/CPU and degrade service availability.`,
+        [
+          ...TARGET_APP_FIX_FIRST,
+          `Apply strict max body size for ${path} (e.g., 1MB for auth endpoints)`,
+          'Use schema validation to reject unexpected large fields (e.g., extraData)',
+          'Short-circuit oversized requests before business logic/database layers',
+          'Add per-route limits for high-risk endpoints (login, registration, file uploads)',
+        ],
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    }
   } catch (e: any) {
     // Step 5: Handle network-level rejections
     // Network errors are acceptable - payload may be rejected at proxy/load balancer level
     if (e.message?.includes('Request Entity Too Large') || e.message?.includes('413')) {
-      // Good - payload was rejected at network level
+      networkRejected = true;
+      networkRejectionReason = e.message;
+    }
+
+    if (networkRejected) {
+      reporter.reportPass(
+        `System is protected against oversized payload abuse: 10MB request was rejected at network/proxy layer before app processing. ` +
+        `Evidence: ${networkRejectionReason}`,
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
       return;
     }
+
+    reporter.reportWarning(
+      `Oversized payload test encountered an unexpected client/network error without clear size-limit evidence. Error: ${e?.message || 'unknown error'}`,
+      [
+        ...TARGET_APP_FIX_FIRST,
+        'Verify reverse proxy and application body-size limits are both configured',
+        'Ensure oversized request rejections are returned consistently as HTTP 413',
+      ],
+      OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+    );
   }
 });
 
@@ -109,6 +163,7 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
  * 4. Check for appropriate timeout behavior
  */
 test('Payload size: API has reasonable size limits', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   // Step 1: Create a moderate-sized payload (5MB)
@@ -120,6 +175,7 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
   // Step 2: Verify login endpoint exists for testing
   const attempt = await tryLogin(request as any, user.email!, user.password!);
   if (!attempt) {
+    reporter.reportSkip('Login endpoint not found');
     test.skip(true, 'Login endpoint not found');
     return;
   }
@@ -136,17 +192,35 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
     });
 
     const status = res.status();
-    // Step 4: Verify server has size limits in place
-    // Should reject with 413 (Payload Too Large) or 400 (Bad Request)
-    const hasLimits = status === 413 || status === 400;
-    
-    softCheck(
-      testInfo,
-      hasLimits || status === 404, // 404 is acceptable if endpoint doesn't exist
-      `API may not have adequate payload size limits (status: ${status})`
-    );
+    const hasLimits = status === 413 || status === 400 || status === 404;
+
+    if (hasLimits) {
+      reporter.reportPass(
+        `System is protected: endpoint ${path} enforced reasonable handling for a 5MB request with status ${status}. ` +
+        `This indicates payload-size controls or endpoint-level request validation are in place.`,
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    } else {
+      reporter.reportWarning(
+        `API may lack adequate payload size controls: endpoint ${path} returned status ${status} for a 5MB request. ` +
+        `Risk: sustained medium-size requests can consume server resources and degrade performance over time.`,
+        [
+          ...TARGET_APP_FIX_FIRST,
+          `Define explicit max request size on ${path} and reject with HTTP 413`,
+          'Set conservative body-parser limits for JSON/form content',
+          'Apply per-user/IP throttling for repeated large requests',
+          'Track and alert on request size percentile anomalies',
+        ],
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    }
   } catch (e: any) {
     // Step 5: Handle timeout or rejection scenarios
     // Timeout or rejection is acceptable behavior for large payloads
+    reporter.reportPass(
+      `System is protected: 5MB request to ${path} did not complete normally (timeout/rejection), indicating processing safeguards against heavy payloads. ` +
+      `Evidence: ${e?.message || 'request aborted or timed out'}`,
+      OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+    );
   }
 });

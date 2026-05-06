@@ -14,22 +14,22 @@ async function discoverLoginSelectors() {
   const baseURL = process.env.BASE_URL || 'http://localhost:5001';
   const loginPaths = ['/login', '/signin', '/auth', '/auth/login', '/auth/signin', '/'];
   
-  console.log('🔍 Checking login pages...\n');
+  console.log('Checking login pages...\n');
   
   for (const path of loginPaths) {
     try {
-      console.log(`\n📄 Checking ${baseURL}${path}...`);
+      console.log(`\n Checking ${baseURL}${path}...`);
       const response = await page.goto(`${baseURL}${path}`, { 
         timeout: 5000, 
         waitUntil: 'domcontentloaded' 
       });
       
       if (!response || response.status() !== 200) {
-        console.log(`   ⏭️  Skipped (status ${response?.status()})`);
+        console.log(`   ⏭  Skipped (status ${response?.status()})`);
         continue;
       }
       
-      console.log(`   ✅ Page found!\n`);
+      console.log(`Page found!\n`);
       
       // Find all input fields
       const inputs = await page.evaluate(() => {
@@ -50,7 +50,7 @@ async function discoverLoginSelectors() {
       });
       
       if (inputs.length > 0) {
-        console.log('   📝 Input Fields Found:');
+        console.log('Input Fields Found:');
         inputs.forEach((input, i) => {
           console.log(`\n   ${i + 1}. Type: ${input.type}`);
           if (input.name) console.log(`      name="${input.name}"`);
@@ -58,7 +58,7 @@ async function discoverLoginSelectors() {
           if (input.placeholder) console.log(`      placeholder="${input.placeholder}"`);
           if (input.class) console.log(`      class="${input.class}"`);
           if (input.ariaLabel) console.log(`      aria-label="${input.ariaLabel}"`);
-          console.log(`      ✅ Selector: ${input.selector}`);
+          console.log(`Selector: ${input.selector}`);
         });
       }
       
@@ -79,13 +79,13 @@ async function discoverLoginSelectors() {
       });
       
       if (buttons.length > 0) {
-        console.log('\n   🔘 Buttons Found:');
+        console.log('\n Buttons Found:');
         buttons.forEach((button, i) => {
           console.log(`\n   ${i + 1}. Type: ${button.type}`);
           if (button.text) console.log(`      text="${button.text}"`);
           if (button.id) console.log(`      id="${button.id}"`);
           if (button.class) console.log(`      class="${button.class}"`);
-          console.log(`      ✅ Selector: ${button.selector}`);
+          console.log(`Selector: ${button.selector}`);
         });
       }
       
@@ -109,14 +109,14 @@ async function discoverLoginSelectors() {
       });
       
       if (errorContainers.length > 0) {
-        console.log('\n   ⚠️  Error/Message Containers Found:');
+        console.log('\n Error/Message Containers Found:');
         errorContainers.forEach(container => {
           console.log(`      - ${container}`);
         });
       }
       
       // Generate recommended selectors
-      console.log('\n   📋 RECOMMENDED SELECTORS FOR TESTS:\n');
+      console.log('\n RECOMMENDED SELECTORS FOR TESTS:\n');
       
       const emailInput = inputs.find(i => 
         i.type === 'email' || 
@@ -142,7 +142,7 @@ async function discoverLoginSelectors() {
         console.log(`   Error Message: page.locator('${errorContainers[0].split(' (')[0]}')`);
       }
       
-      console.log('\n   ✨ LOGIN PAGE FOUND! Use these selectors in your tests.\n');
+      console.log('\n   LOGIN PAGE FOUND! Use these selectors in your tests.\n');
       
       // Wait for user to inspect
       console.log('   Press Ctrl+C to exit...');
@@ -150,7 +150,7 @@ async function discoverLoginSelectors() {
       break;
       
     } catch (e) {
-      console.log(`   ⏭️  Skipped (${e})`);
+      console.log(`  Skipped (${e})`);
     }
   }
   

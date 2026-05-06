@@ -192,7 +192,7 @@ All tests use the comprehensive SecurityReporter for detailed findings:
 - ✅ **Pass/Fail/Warning/Skip** statuses
 - 🔴 **Risk levels** (CRITICAL, HIGH, MEDIUM, LOW, INFO)
 - 📋 **Actionable recommendations** (5-8 per vulnerability)
-- 🔧 **Step-by-step remediation** guides
+- **Step-by-step remediation** guides
 - 📚 **OWASP references** with links
 - 📊 **Evidence capture** (JSON payloads)
 

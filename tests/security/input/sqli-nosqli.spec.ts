@@ -1,5 +1,5 @@
 import { test, request as playwrightRequest } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
@@ -94,16 +94,33 @@ test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
 });
 
 test('SQLi: parameterized queries for search/filter', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'SQLi search/filter probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before injection security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'SQLi search/filter probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so injection probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -205,16 +222,33 @@ test('NoSQLi: MongoDB injection in queries', async ({ request }, testInfo) => {
 });
 
 test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Error-based SQLi probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before injection security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Error-based SQLi probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so injection probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -253,16 +287,33 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
 });
 
 test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Input-sanitization injection probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before injection security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Input-sanitization injection probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so injection probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -324,8 +375,15 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Injection probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in CI before running injection security tests',
+        'Ensure Playwright baseURL points to the deployed target environment',
+        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
   
@@ -373,10 +431,17 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
     }
   }
   
-  // Step 5: Skip if no endpoints were probeable
+  // Step 5: Fail with remediation if no endpoints were probeable
   if (!probed) {
-    reporter.reportSkip('No probeable endpoints for injection test');
-    test.skip(true, 'No probeable endpoints for injection test');
+    reporter.reportWarning(
+      'Injection probe could not run because no probeable endpoints responded.',
+      [
+        'Expose/document at least one API endpoint that accepts query input for injection checks',
+        'Ensure CI target includes representative routes for security probing',
+        'Add route metadata so tests can discover valid probe targets'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 });

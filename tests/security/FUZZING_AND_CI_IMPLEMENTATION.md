@@ -73,7 +73,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Authentication endpoint handles random inputs  
 └── Search/filter endpoints handle random inputs
 
-🔧 Payloads Generated: 42 unique fuzz payloads
+Payloads Generated: 42 unique fuzz payloads
 ├── Extreme numeric values (infinity, NaN, overflow)
 ├── Type confusion (boolean as string, etc.)
 ├── String edge cases (empty, whitespace, null bytes)
@@ -97,7 +97,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Deeply nested structures handled safely
 └── Large payload limits enforced
 
-🔧 Payloads Generated: 52 malformed JSON variations
+Payloads Generated: 52 malformed JSON variations
 ├── Invalid syntax (unclosed braces, trailing commas)
 ├── Empty/null payloads
 ├── Type mismatches (HTML, XML as JSON)
@@ -124,7 +124,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Null and undefined handled safely
 └── Array size limits enforced
 
-🔧 Test Cases: 65 boundary conditions
+Test Cases: 65 boundary conditions
 ├── Integer boundaries (int32, int64, uint max)
 ├── Float boundaries (MAX_VALUE, MIN_VALUE, Infinity, NaN)
 ├── String lengths (empty, 1, 255, 256, 1K, 10K, 100K)
@@ -155,7 +155,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Zero-width characters handled
 └── Bidirectional text controlled
 
-🔧 Attack Vectors: 35 Unicode exploits
+Attack Vectors: 35 Unicode exploits
 ├── NFC vs NFD normalization
 ├── Cyrillic/Greek lookalikes
 ├── Zero-width spaces/joiners
@@ -182,7 +182,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Path traversal sequences blocked
 └── NoSQL operators filtered
 
-🔧 Attack Vectors: 70+ escape sequences
+Attack Vectors: 70+ escape sequences
 ├── SQL: quotes, comments, UNION, DROP
 ├── XSS: <script>, event handlers, protocols
 ├── Shell: pipes, backticks, redirects
@@ -209,7 +209,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 ├── Null byte injection prevented
 └── Sensitive files protected
 
-🔧 Attack Vectors: 45 path traversal techniques
+Attack Vectors: 45 path traversal techniques
 ├── Basic ../ and ..\\ sequences
 ├── Deep traversal (multiple levels)
 ├── URL encoding (%2e%2e%2f)
@@ -303,7 +303,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 
 ---
 
-## 🚀 How to Use
+## How to Use
 
 ### Run Individual Test Suites
 
@@ -421,7 +421,7 @@ OWASP Coverage:         ✅ 100%
 - **CI/Regression**: Security degradation, reintroduced vulnerabilities
 
 ### 📊 Reporting:
-- **Console**: Immediate feedback with ✅ ❌ ⚠️ ⏭️
+- **Console**: Immediate feedback with status indicators
 - **Markdown**: Detailed reports attached to tests
 - **Allure**: Beautiful interactive dashboards
 - **Historical**: Trend tracking in scan-results-audit
@@ -491,4 +491,4 @@ npm run test:sec
 npm run allure:serve
 ```
 
-📊 **View your security posture in beautiful Allure reports!** 🚀
+**View your security posture in beautiful Allure reports!**

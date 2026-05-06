@@ -1,18 +1,30 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter } from '../security-reporter';
 
 test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(page.request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning('No test user configured', [
+      'Ensure test credentials are set up in tests/fixtures/users.json',
+      'Run setup scripts to initialize test user',
+      'Verify FIXTURE_USERS_INTEGRATION.md for user setup process',
+      'Check if app registration endpoint is available'
+    ], 'A2:2021-Identification and Authentication Failures');
     return;
   }
 
   // Login via API
   const attempt = await tryLogin(page.request as any, user.email, user.password);
   if (!attempt) {
-    test.skip(true, 'Login endpoint not found');
+    reporter.reportWarning('Could not complete login via API', [
+      'Verify /login or /api/auth endpoints exist',
+      'Check that API login returns auth tokens or sets secure cookies',
+      'Ensure test credentials are valid for the target app',
+      'Review app authentication flow and expected response format'
+    ], 'A2:2021-Identification and Authentication Failures');
     return;
   }
 
@@ -42,41 +54,61 @@ test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testI
       'Sensitive auth tokens should not be stored in localStorage (prefer httpOnly cookies)'
     );
   } catch (e) {
-    // Page might not be available
+    reporter.reportWarning('Exception while checking localStorage', [
+      'Ensure page is accessible and JavaScript is enabled',
+      'Check browser console for errors during page load',
+      'Verify DOM is ready before querying storage',
+      'Use try-catch to handle navigation failures gracefully'
+    ], 'A3:2021-Injection');
   }
 });
 
 test('CSP: Content Security Policy header present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     const response = await page.goto('/');
     
-    if (response) {
-      const headers = response.headers();
-      const csp = headers['content-security-policy'];
+    if (!response) {
+      reporter.reportWarning('No response received from base URL', [
+        'Verify BASE_URL environment variable is set correctly',
+        'Ensure application is running and accessible',
+        'Check network connectivity and firewall rules',
+        'Review server logs for startup errors'
+      ], 'A1:2021-Broken Access Control');
+      return;
+    }
+    
+    const headers = response.headers();
+    const csp = headers['content-security-policy'];
+    
+    softCheck(
+      testInfo,
+      !!csp,
+      'Content-Security-Policy header should be present to prevent XSS'
+    );
+
+    if (csp) {
+      // Check for unsafe-inline in script-src
+      const hasUnsafeInline = csp.includes("'unsafe-inline'");
       
       softCheck(
         testInfo,
-        !!csp,
-        'Content-Security-Policy header should be present to prevent XSS'
+        !hasUnsafeInline || csp.includes('nonce-') || csp.includes('sha256-'),
+        "CSP should avoid 'unsafe-inline' or use nonces/hashes"
       );
-
-      if (csp) {
-        // Check for unsafe-inline in script-src
-        const hasUnsafeInline = csp.includes("'unsafe-inline'");
-        
-        softCheck(
-          testInfo,
-          !hasUnsafeInline || csp.includes('nonce-') || csp.includes('sha256-'),
-          "CSP should avoid 'unsafe-inline' or use nonces/hashes"
-        );
-      }
     }
   } catch (e) {
-    test.skip(true, 'Page not available');
+    reporter.reportWarning('Exception while checking CSP header', [
+      'Verify application base URL is accessible',
+      'Check that CSP headers are being sent by server',
+      'Review server configuration for missing CSP middleware',
+      'Ensure SSL/TLS is properly configured if using HTTPS'
+    ], 'A6:2021-Vulnerable and Outdated Components');
   }
 });
 
 test('XSS: sessionStorage does not contain sensitive data', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     await page.goto('/');
     
@@ -102,6 +134,11 @@ test('XSS: sessionStorage does not contain sensitive data', async ({ page }, tes
       'Passwords or secrets should never be stored in sessionStorage'
     );
   } catch (e) {
-    test.skip(true, 'Page not available');
+    reporter.reportWarning('Exception while checking sessionStorage', [
+      'Verify application is running and accessible at BASE_URL',
+      'Check browser console for page load or script errors',
+      'Ensure session is properly initialized before querying storage',
+      'Add error logging to understand why storage check failed'
+    ], 'A1:2021-Broken Access Control');
   }
 });

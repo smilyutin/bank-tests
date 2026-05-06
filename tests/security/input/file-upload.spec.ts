@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -43,17 +44,34 @@ import * as path from 'path';
  * 3. Ensure server-side validation is in place
  */
 test('File upload: malicious file extensions blocked', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Malicious-extension upload probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before file-upload security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   // Step 1: Authenticate user for upload testing
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Malicious-extension upload probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so upload probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -134,17 +152,34 @@ test('File upload: malicious file extensions blocked', async ({ request }, testI
  * 4. Ensure resource protection is in place
  */
 test('File upload: file size limits enforced', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'File-size-limit upload probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before file-upload security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+    );
     return;
   }
 
   // Step 1: Authenticate user for upload testing
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'File-size-limit upload probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so upload probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+    );
     return;
   }
 
@@ -193,16 +228,33 @@ test('File upload: file size limits enforced', async ({ request }, testInfo) => 
 });
 
 test('File upload: MIME type validation', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'MIME-validation upload probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before file-upload security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'MIME-validation upload probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so upload probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -245,16 +297,33 @@ test('File upload: MIME type validation', async ({ request }, testInfo) => {
 });
 
 test('File upload: path traversal protection', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Upload path-traversal probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before file-upload security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Upload path-traversal probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so upload probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -300,16 +369,33 @@ test('File upload: path traversal protection', async ({ request }, testInfo) => 
 });
 
 test('File upload: uploaded files not executable', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Upload executable-serving probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before file-upload security tests run',
+        'Fail CI earlier if required auth fixtures are missing'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Upload executable-serving probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so upload probes use the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 

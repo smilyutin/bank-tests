@@ -1,11 +1,18 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -67,10 +74,16 @@ test('X-Content-Type-Options: present on all resources', async ({ page }, testIn
 });
 
 test('Content-Type: properly set for responses', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 

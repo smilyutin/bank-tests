@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
 import * as fs from 'fs';
 import * as path from 'path';
 

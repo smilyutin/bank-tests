@@ -1,5 +1,5 @@
 import { test, request as playwrightRequest } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
@@ -39,10 +39,19 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * 3. Verify all required headers are configured
  */
 test('Security headers: comprehensive check', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'Comprehensive security-header check could not run because homepage response was not received.',
+      [
+        'Ensure application root endpoint is reachable in test environment',
+        'Stabilize app startup/network routing before running security scans',
+        'Fail deployment when baseline health checks for root endpoint fail',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -89,10 +98,19 @@ test('Security headers: comprehensive check', async ({ page }, testInfo) => {
  * 3. Verify no sensitive information is exposed
  */
 test('Security headers: no information disclosure', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'Information-disclosure header check could not run because homepage response was not received.',
+      [
+        'Ensure application root endpoint is reachable in test environment',
+        'Stabilize app startup/network routing before running security scans',
+        'Fail deployment when baseline health checks for root endpoint fail',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -135,10 +153,19 @@ test('Security headers: no information disclosure', async ({ page }, testInfo) =
  * 3. Ensure modern CSP is used instead
  */
 test('Security headers: X-XSS-Protection removed or set to 0', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'X-XSS-Protection deprecation check could not run because homepage response was not received.',
+      [
+        'Ensure application root endpoint is reachable in test environment',
+        'Stabilize app startup/network routing before running security scans',
+        'Fail deployment when baseline health checks for root endpoint fail',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -177,6 +204,7 @@ test('Security headers: X-XSS-Protection removed or set to 0', async ({ page }, 
  * 3. Verify no-store or private directives are present
  */
 test('Security headers: Cache-Control for sensitive pages', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   // Step 1: Navigate to potentially sensitive pages
   await page.goto('/');
   
@@ -185,7 +213,15 @@ test('Security headers: Cache-Control for sensitive pages', async ({ page }, tes
                    await page.goto('/settings').catch(() => null);
 
   if (!response) {
-    test.skip(true, 'No sensitive pages found');
+    reporter.reportWarning(
+      'Sensitive-page cache-control probe could not run because no candidate sensitive routes were reachable (/profile, /account, /settings).',
+      [
+        'Expose/document at least one authenticated sensitive route for cache-control validation',
+        'Ensure test environment routes mirror production protected pages',
+        'Add OpenAPI/UI route metadata so security probes can discover sensitive endpoints',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -223,29 +259,81 @@ test('Security headers: Cache-Control for sensitive pages', async ({ page }, tes
  * 2. Check Cache-Control and Pragma headers
  * 3. Verify caching is disabled for user data
  */
-test('Security headers: no cache for authenticated resources', async ({ page }, testInfo) => {
-  const response = await page.goto('/api/users/me').catch(() => null);
-  
+test('Security headers: no cache for authenticated resources', async ({ baseURL }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
+
+  if (!baseURL) {
+    reporter.reportWarning(
+      'Authenticated-resource cache-control check could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI configuration before security tests run',
+        'Ensure Playwright baseURL points to reachable target application',
+        'Fail pipeline early when baseURL is missing',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+    return;
+  }
+
+  const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  const authCandidates = ['/api/users/me', '/api/me', '/api/user/me', '/me'];
+
+  let response: Awaited<ReturnType<typeof api.get>> | null = null;
+  let endpointUsed: string | null = null;
+
+  for (const path of authCandidates) {
+    const res = await api.get(path).catch(() => null);
+    if (!res) continue;
+
+    // Endpoint exists if not 404; 401/403 still indicates auth-related resource.
+    if (res.status() !== 404) {
+      response = res;
+      endpointUsed = path;
+      break;
+    }
+  }
+
   if (!response) {
-    test.skip(true, 'No user API endpoint found');
+    reporter.reportWarning(
+      'No authenticated-resource endpoint responded for cache-control probe (/api/users/me, /api/me, /api/user/me, /me).',
+      [
+        'Expose/document a stable authenticated profile endpoint for security testing',
+        'Ensure non-production environments include representative authenticated APIs',
+        'Add endpoint discovery metadata (OpenAPI) for authenticated resource checks',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
   const headers = response.headers();
-  const cacheControl = headers['cache-control'];
-  const pragma = headers['pragma'];
+  const cacheControl = (headers['cache-control'] || '').toLowerCase();
+  const pragma = (headers['pragma'] || '').toLowerCase();
+  const status = response.status();
 
-  // Step 1: Check for cache prevention headers
-  const properlyConfigured = 
-    cacheControl?.includes('no-store') ||
-    cacheControl?.includes('no-cache') ||
+  // Accept strict anti-cache directives for sensitive/authenticated endpoints.
+  const properlyConfigured =
+    cacheControl.includes('no-store') ||
+    (cacheControl.includes('no-cache') && cacheControl.includes('private')) ||
     pragma === 'no-cache';
 
-  // Step 2: Verify authenticated resources disable caching
-  softCheck(
-    testInfo,
-    properlyConfigured,
-    'Authenticated API resources should disable caching'
+  if (!properlyConfigured) {
+    reporter.reportWarning(
+      `Authenticated API resource ${endpointUsed} (status ${status}) does not include safe anti-cache directives. Observed Cache-Control="${cacheControl || 'missing'}", Pragma="${pragma || 'missing'}".`,
+      [
+        'Add Cache-Control: no-store for authenticated and sensitive responses.',
+        'At minimum, use Cache-Control: private, no-cache, must-revalidate for user-specific resources.',
+        'Add Pragma: no-cache for legacy proxy compatibility.',
+        'Review all /me, /profile, /account endpoints to ensure consistent no-cache behavior.'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+    return;
+  }
+
+  reporter.reportPass(
+    `Authenticated API resource ${endpointUsed} correctly disables caching (Cache-Control="${cacheControl || 'n/a'}", Pragma="${pragma || 'n/a'}").`,
+    OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
   );
 });
 
@@ -271,8 +359,15 @@ test('Security Headers (OWASP API7): comprehensive security and fingerprinting c
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'OWASP API7 comprehensive header/fingerprinting check could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI configuration before security tests run',
+        'Ensure Playwright baseURL points to reachable target application',
+        'Fail pipeline early when baseURL is missing',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
   
@@ -280,8 +375,15 @@ test('Security Headers (OWASP API7): comprehensive security and fingerprinting c
   const res = await api.get('/').catch(() => null);
   
   if (!res) {
-    reporter.reportSkip('Base URL not reachable');
-    test.skip(true, 'Base URL not reachable');
+    reporter.reportWarning(
+      'OWASP API7 comprehensive header/fingerprinting check failed because base URL was not reachable.',
+      [
+        'Ensure app is running and accessible from test environment network',
+        'Stabilize startup/health checks before launching security suite',
+        'Fail CI earlier on base URL reachability failure to avoid partial security coverage',
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
   

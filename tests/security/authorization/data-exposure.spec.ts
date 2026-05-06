@@ -50,8 +50,15 @@ test('Excessive Data Exposure: GET user should not return sensitive fields (pass
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Data exposure probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI before running security tests',
+        'Ensure Playwright config resolves a reachable target application URL',
+        'Fail pipeline early when baseURL is missing to avoid incomplete security coverage',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return;
   }
   
@@ -60,8 +67,15 @@ test('Excessive Data Exposure: GET user should not return sensitive fields (pass
   // Step 1: Load persisted users for testing
   const users = loadUsers();
   if (users.length === 0) {
-    reporter.reportSkip('No persisted users available to check'); 
-    test.skip(true, 'No persisted users available to check'); 
+    reporter.reportWarning(
+      'No persisted users available for data-exposure validation.',
+      [
+        'Seed at least one test user in tests/fixtures/users.json',
+        'Automate user fixture bootstrap before security suite execution',
+        'Ensure test users are discoverable for user-data exposure probes',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return; 
   }
   const u = users[0];
@@ -133,8 +147,15 @@ test('Excessive Data Exposure: GET user should not return sensitive fields (pass
   
   // Step 7: Skip if no user endpoint found
   if (!tried) {
-    reporter.reportSkip('No user listing endpoint found to check for excessive data exposure'); 
-    test.skip(true, 'No user listing endpoint found to check for excessive data exposure'); 
+    reporter.reportWarning(
+      `No user endpoint responded for excessive data exposure checks. Tried: ${candidateUserGet.join(', ')}`,
+      [
+        'Expose/document stable user retrieval endpoint(s) for security validation',
+        'Include user endpoint paths in OpenAPI so security tests can discover them automatically',
+        'Ensure non-production test environment enables read-only user endpoints for validation probes',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return; 
   }
 });
@@ -149,8 +170,15 @@ test('Excessive Data Exposure: API should not expose tokens or secrets', async (
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Token/secret exposure probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI before running security tests',
+        'Ensure Playwright config resolves a reachable target application URL',
+        'Fail pipeline early when baseURL is missing to avoid incomplete security coverage',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return;
   }
   
@@ -158,8 +186,15 @@ test('Excessive Data Exposure: API should not expose tokens or secrets', async (
   const users = loadUsers();
   
   if (users.length === 0) {
-    reporter.reportSkip('No persisted users available to check');
-    test.skip(true, 'No persisted users available to check');
+    reporter.reportWarning(
+      'No persisted users available for token/secret exposure validation.',
+      [
+        'Seed at least one test user in tests/fixtures/users.json',
+        'Automate user fixture bootstrap before security suite execution',
+        'Ensure user data endpoints can be queried in test environment',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return;
   }
   
@@ -200,7 +235,15 @@ test('Excessive Data Exposure: API should not expose tokens or secrets', async (
   }
   
   if (!tried) {
-    reporter.reportSkip('No user listing endpoint found to check for token exposure');
-    test.skip(true, 'No user listing endpoint found');
+    reporter.reportWarning(
+      `No user listing endpoint responded for token/secret exposure checks. Tried: ${candidateUserGet.join(', ')}`,
+      [
+        'Expose/document stable user listing endpoint(s) in API contracts',
+        'Ensure security test environment includes representative user-data APIs',
+        'Provide OpenAPI metadata so automated security tests can discover valid routes',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
+    return;
   }
 });

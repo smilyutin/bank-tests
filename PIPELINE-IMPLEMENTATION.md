@@ -1,4 +1,4 @@
-# 🎯 Pipeline Implementation - Complete Guide
+# Pipeline Implementation - Complete Guide
 
 ## Overview
 
@@ -12,64 +12,64 @@
 
 ---
 
-## 📁 What Was Created
+## What Was Created
 
 ### Files Added to Test Repo
 
 ```
 bank-tests/
 └── .github/workflows/
-    ├── test-vuln-bank.yml              ✅ CREATED - Main workflow
-  └── (no scheduled workflow)         ✅ Manual runs only
+    ├── test-vuln-bank.yml              CREATED - Main workflow
+  └── (no scheduled workflow)         Manual runs only
 ```
 
 ### Files Already Configured
 
 ```
 bank-tests/
-├── playwright.config.ts                ✅ Already has BASE_URL support
-└── package.json                        ✅ Already has test scripts
+├── playwright.config.ts                Already has BASE_URL support
+└── package.json                        Already has test scripts
 ```
 
 ---
 
-## 🔄 How It Works
+## How It Works
 
 ### Workflow Execution Flow
 
 ```
 1. 🎬 Trigger (manual)
         ↓
-2. 📥 Clone Test Repo (smilyutin/bank-tests)
+2. Clone Test Repo (smilyutin/bank-tests)
         ↓
-3. 📦 Install Test Dependencies
+3. Install Test Dependencies
         ↓
-4. 📥 Clone APP Repo (smilyutin/vuln_bank)
+4. Clone APP Repo (smilyutin/vuln_bank)
         ↓
-5. 📦 Install APP Dependencies
+5. Install APP Dependencies
         ↓
-6. 🐳 Create Dockerfile & docker-compose.yml (if missing)
+6. Create Dockerfile & docker-compose.yml (if missing)
         ↓
 7. 🔨 Build APP Docker Image
         ↓
-8. 🚀 Start APP Container (docker-compose up)
+8. Start APP Container (docker-compose up)
         ↓
 9. ⏳ Wait for Health Check
         ↓
 10. 🧪 Run Tests (API + Security + UI)
         ↓
-11. 📊 Generate Reports (Playwright + Allure)
+11. Generate Reports (Playwright + Allure)
         ↓
 12. 📤 Upload Artifacts
         ↓
 13. 🧹 Cleanup (docker-compose down)
         ↓
-14. ✅ Done!
+14. Done!
 ```
 
 ---
 
-## 🚀 Testing the Setup
+## Testing the Setup
 
 ### Test 1: Manual Trigger (Recommended First Test)
 
@@ -95,13 +95,13 @@ bank-tests/
 
 5. **Expected Result:**
    ```
-   ✅ Clone repos: Success
-   ✅ Build APP: Success
-   ✅ Start APP: Success
-   ✅ Wait for health: Success
-   ✅ Run tests: Complete (may have warnings in SOFT mode)
-   ✅ Generate reports: Success
-   ✅ Cleanup: Success
+   Clone repos: Success
+   Build APP: Success
+   Start APP: Success
+   Wait for health: Success
+   Run tests: Complete (may have warnings in SOFT mode)
+   Generate reports: Success
+   Cleanup: Success
    ```
 
 ---
@@ -140,40 +140,40 @@ To run tests:
 
 ---
 
-## 📊 Understanding Workflow Outputs
+## Understanding Workflow Outputs
 
 ### Live Logs
 
 Click on any step to see real-time output:
 
 ```
-📥 Clone APP Repo
-  ✅ Cloning into 'app-repo'...
-  ✅ Checking out branch 'main'...
+Clone APP Repo
+  Cloning into 'app-repo'...
+  Checking out branch 'main'...
 
 🔨 Build APP Docker Image
-  ✅ Building Docker image...
-  ✅ Step 1/6 : FROM node:20-alpine
-  ✅ Step 2/6 : WORKDIR /app
+  Building Docker image...
+  Step 1/6 : FROM node:20-alpine
+  Step 2/6 : WORKDIR /app
   ...
 
-🚀 Start APP Container
-  ✅ Creating network...
-  ✅ Creating volume...
-  ✅ Starting container...
+Start APP Container
+  Creating network...
+  Creating volume...
+  Starting container...
 
 ⏳ Wait for APP to be Ready
   ⏳ Waiting for app... (09:15:30)
   ⏳ Waiting for app... (09:15:33)
-  ✅ Application is ready!
+  Application is ready!
 
 🧪 Run Tests
   Running API tests...
-  ✅ 45 passed
+  45 passed
   
   Running Security tests...
-  ⚠️  18 warnings (SOFT mode)
-  ✅ 52 passed
+  18 warnings (SOFT mode)
+  52 passed
 ```
 
 ### Artifacts Available
@@ -181,7 +181,7 @@ Click on any step to see real-time output:
 After workflow completes, scroll to bottom:
 
 ```
-📦 Artifacts (4)
+Artifacts (4)
 ├── playwright-report-123      Download HTML test report
 ├── allure-report-123          Download Allure report  
 ├── test-results-123           Download JSON results
@@ -192,9 +192,9 @@ Click any artifact to download and view locally.
 
 ---
 
-## 🎯 SOFT Mode vs HARD Mode
+## SOFT Mode vs HARD Mode
 
-### SOFT Mode (Default) ✅ Recommended
+### SOFT Mode (Default) Recommended
 
 ```yaml
 soft_mode: 'true'
@@ -214,8 +214,8 @@ soft_mode: 'true'
 
 **Example Output:**
 ```
-⚠️  18 security findings detected
-✅ Tests completed (SOFT mode - not failing build)
+18 security findings detected
+Tests completed (SOFT mode - not failing build)
 ```
 
 ### HARD Mode
@@ -238,13 +238,13 @@ soft_mode: 'false'
 
 **Example Output:**
 ```
-❌ 18 security issues found
-❌ Tests failed (HARD mode - failing build)
+18 security issues found
+Tests failed (HARD mode - failing build)
 ```
 
 ---
 
-## 🔧 Customization Options
+## Customization Options
 
 ### Change Default Branch
 
@@ -290,7 +290,7 @@ Then add case in Run Tests step:
 
 ```yaml
 performance)
-  echo "🚀 Running Performance tests..."
+  echo "Running Performance tests..."
   npm run test:perf || EXIT_CODE=$?
   ;;
 ```
@@ -366,7 +366,7 @@ sudo apt-get install docker-compose-plugin
 **Symptoms:**
 ```
 ⏳ Waiting for app... (timeout)
-❌ Error: Application failed to start
+Error: Application failed to start
 ```
 
 **Fixes:**
@@ -393,7 +393,7 @@ sudo apt-get install docker-compose-plugin
 
 **Symptoms:**
 ```
-❌ Error: failed to solve with frontend dockerfile.v0
+Error: failed to solve with frontend dockerfile.v0
 ```
 
 **Fixes:**
@@ -416,7 +416,7 @@ sudo apt-get install docker-compose-plugin
 
 **Symptoms:**
 ```
-❌ Error: connect ECONNREFUSED 127.0.0.1:5001
+Error: connect ECONNREFUSED 127.0.0.1:5001
 ```
 
 **Fixes:**
@@ -441,7 +441,7 @@ sudo apt-get install docker-compose-plugin
 
 **Symptoms:**
 ```
-⚠️  Containers still running after cleanup
+Containers still running after cleanup
 ```
 
 **Fix:** Add force cleanup:
@@ -510,7 +510,7 @@ sudo apt-get install docker-compose-plugin
 
 ---
 
-## 📊 Monitoring
+## Monitoring
 
 ### Check Workflow Status
 
@@ -567,7 +567,7 @@ Add to workflow (after tests):
 
 ---
 
-## ✅ Verification Checklist
+## Verification Checklist
 
 - [ ] Workflows created in `.github/workflows/`
 - [ ] playwright.config.ts has BASE_URL support
@@ -587,10 +587,10 @@ Add to workflow (after tests):
 ## 🎓 Next Steps
 
 ### Immediate (After Setup)
-1. ✅ Test manual trigger
-2. ✅ Test automatic trigger
-3. ✅ Download and review reports
-4. ✅ Verify cleanup works
+1. Test manual trigger
+2. Test automatic trigger
+3. Download and review reports
+4. Verify cleanup works
 
 ### Short Term (1 week)
 1. Add more test coverage
@@ -615,14 +615,14 @@ Add to workflow (after tests):
 
 ---
 
-## 🎉 Summary
+## Summary
 
 **What You Have:**
-- ✅ Manual trigger with options
-- ✅ No scheduled runs (by design)
-- ✅ SOFT mode by default (non-blocking)
-- ✅ Complete test reports
-- ✅ Automatic cleanup
-- ✅ No APP repo changes needed!
+- Manual trigger with options
+- No scheduled runs (by design)
+- SOFT mode by default (non-blocking)
+- Complete test reports
+- Automatic cleanup
+- No APP repo changes needed!
 
-**Ready to test:** Go to Actions tab and click "Run workflow"! 🚀
+**Ready to test:** Go to Actions tab and click "Run workflow"!

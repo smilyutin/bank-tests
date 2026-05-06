@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
 
 /**
  * XSS (Cross-Site Scripting) Vulnerability Tests

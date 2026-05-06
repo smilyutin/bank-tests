@@ -1,4 +1,4 @@
-# 🚀 Quick Start - CI/CD Setup Complete!
+# Quick Start - CI/CD Setup Complete!
 
 ## ✅ What Was Done
 
@@ -239,7 +239,7 @@ After first run, verify:
 
 **Your CI/CD pipeline is ready to use!**
 
-**Next action:** Push to GitHub and watch it run! 🚀
+**Next action:** Push to GitHub and watch it run!
 
 ```bash
 git push origin main

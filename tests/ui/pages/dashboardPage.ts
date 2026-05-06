@@ -80,17 +80,22 @@ export class DashboardPage {
   }
 
   async getAccountBalance() {
-    // Try several selectors that might contain balance
+    // Try several selectors that might contain balance, ordered by specificity
     const balanceSelectors = [
-      'text=/balance:\\s*[$€£]\\d+(\\.\\d{2})?/i',
       '[data-testid*="balance"]',
-      '.balance',
-      '#balance'
+      '[data-testid*="account-balance"]',
+      '.account-balance',
+      '.main-balance',
+      '#balance',
+      '#account-balance',
+      '.balance:first-of-type',
+      'text=/balance:\\s*[$€£]\\d+(\\.\\d{2})?/i'
     ];
     for (const selector of balanceSelectors) {
       const el = this.page.locator(selector);
       if (await el.count()) {
-        const text = await el.innerText();
+        // Handle multiple matches by taking the first one
+        const text = await el.first().innerText();
         // Extract number from text
         const match = text.match(/[$€£]?\s*(\d+(\.\d{2})?)/);
         return match ? parseFloat(match[1]) : null;

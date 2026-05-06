@@ -423,6 +423,13 @@ export class SecurityReporter {
     });
     
     this.addAllureMetadata(result);
+
+        if (process.env.SECURITY_SOFT !== '1') {
+          const recommendationText = recommendations.length > 0
+            ? ` Recommended fixes: ${recommendations.join(' | ')}`
+            : '';
+          throw new Error(`${description}${recommendationText}`);
+        }
   }
 
   /**

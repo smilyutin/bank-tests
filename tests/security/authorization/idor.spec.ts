@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * IDOR (Insecure Direct Object Reference) Vulnerability Tests
@@ -38,17 +39,34 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * 3. Verify that only authorized resources are accessible
  */
 test('IDOR: users cannot access other users resources by ID', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'IDOR resource-access probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 
   // Step 1: Authenticate as a valid user
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login or obtain token');
+    reporter.reportWarning(
+      'IDOR resource-access probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so authorization probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 
@@ -122,17 +140,34 @@ test('IDOR: users cannot access other users resources by ID', async ({ request }
  * 3. Verify that most requests fail (indicating proper protection)
  */
 test('IDOR: sequential ID enumeration protection', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Sequential ID enumeration probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 
   // Step 1: Authenticate as a valid user
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Sequential ID enumeration probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so enumeration probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 
@@ -188,7 +223,7 @@ test('IDOR: sequential ID enumeration protection', async ({ request }, testInfo)
  * 3. Ensure no sensitive data is returned
  */
 test('IDOR: unauthorized access returns 401/403', async ({ request }, testInfo) => {
-  const user = await ensureTestUser(request as any);
+  void ensureTestUser;
   
   // Step 1: Define protected endpoints that should require authentication
   // These represent sensitive resources that should not be publicly accessible
@@ -244,17 +279,34 @@ test('IDOR: unauthorized access returns 401/403', async ({ request }, testInfo) 
  * 3. Verify the application rejects manipulated parameters
  */
 test('IDOR: parameter manipulation blocked', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Parameter-manipulation probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 
   // Step 1: Authenticate as a valid user
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Parameter-manipulation probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so parameter-tampering probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API1_BOLA.name
+    );
     return;
   }
 

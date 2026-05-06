@@ -1,5 +1,4 @@
 import { test, expect, request } from '@playwright/test';
-import { createRandomUser } from '../../utils/credentials';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
@@ -15,7 +14,7 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  *    user (e.g. `limit`, `ownerId`, `isBlocked`, `isAdmin`)
  * 3. If the endpoint returns success and echoes or applies these fields,
  *    report a mass-assignment vulnerability (OWASP API6)
- * 4. If no candidate endpoints are found, skip the test
+ * 4. If no candidate endpoints are found, fail with remediation (coverage gap)
  */
 
 const candidateUpdatePaths = [
@@ -36,13 +35,19 @@ test('Mass assignment: updating card limits should not permit unauthorized field
   const reporter = new SecurityReporter(testInfo);
 
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Mass-assignment probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI environment before running security tests',
+        'Ensure Playwright baseURL is configured for the target application under test',
+        'Fail pipeline early when baseURL is missing to avoid incomplete security coverage',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
     return;
   }
 
   const api = await request.newContext({ baseURL: baseURL.toString() });
-  const attacker = createRandomUser('sec-atta', false);
   let found = false;
 
   // Payload contains fields that should not be mass-assignable
@@ -123,8 +128,15 @@ test('Mass assignment: updating card limits should not permit unauthorized field
   }
 
   if (!found) {
-    reporter.reportSkip('No card update endpoints found to test mass assignment');
-    test.skip(true, 'No card update endpoints found to test mass assignment');
+    reporter.reportWarning(
+      `No candidate card update endpoints responded for mass-assignment probe. Checked: ${candidateUpdatePaths.join(', ')}`,
+      [
+        'Expose/document a stable card update endpoint in API specification',
+        'Ensure non-production security test environments include card update routes',
+        'Add endpoint discovery metadata (OpenAPI) so mass-assignment tests can target real update paths',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
     return;
   }
 });

@@ -51,8 +51,15 @@ test('Token Expiration: expired tokens rejected', async ({ baseURL }, testInfo) 
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Expired-token validation could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in CI before running token lifecycle tests',
+        'Ensure Playwright baseURL points to the deployed target environment',
+        'Fail the pipeline earlier when baseURL is missing to avoid incomplete token coverage'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -78,8 +85,15 @@ test('Token Expiration: expired tokens rejected', async ({ baseURL }, testInfo) 
   }
   
   if (!registerEndpoint) {
-    reporter.reportSkip('No registration endpoint found for token testing');
-    test.skip(true, 'No registration endpoint found');
+    reporter.reportWarning(
+      'Expired-token validation could not run because no registration endpoint responded for token testing.',
+      [
+        'Expose/document a stable registration endpoint in the deployed environment',
+        'Ensure CI target includes registration endpoints for auth lifecycle tests',
+        'Add OpenAPI or route metadata so token tests can discover valid auth routes'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -105,8 +119,15 @@ test('Token Expiration: expired tokens rejected', async ({ baseURL }, testInfo) 
   }
   
   if (!token) {
-    reporter.reportSkip('Could not obtain authentication token');
-    test.skip(true, 'Could not obtain token');
+    reporter.reportWarning(
+      'Expired-token validation could not run because no authentication token was obtained.',
+      [
+        'Ensure login endpoint returns an access token for test users',
+        'If auth is cookie-based, add equivalent session invalidation checks to this suite',
+        'Document auth transport mechanism so token tests target the correct credential type'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -206,8 +227,15 @@ test('Token Lifecycle: refresh tokens work correctly', async ({ baseURL }, testI
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Refresh-token lifecycle validation could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in CI before running token lifecycle tests',
+        'Ensure Playwright baseURL points to the deployed target environment',
+        'Fail the pipeline earlier when baseURL is missing to avoid incomplete token coverage'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -250,8 +278,15 @@ test('Token Lifecycle: refresh tokens work correctly', async ({ baseURL }, testI
   }
   
   if (!accessToken) {
-    reporter.reportSkip('Could not obtain access token for refresh testing');
-    test.skip(true, 'Could not obtain tokens');
+    reporter.reportWarning(
+      'Refresh-token lifecycle validation could not run because no access token was obtained.',
+      [
+        'Ensure login endpoint returns an access token for test users',
+        'Verify auth routes are reachable in the CI target environment',
+        'Document auth token transport mechanism for lifecycle testing'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -315,8 +350,15 @@ test('Token Lifecycle: refresh tokens work correctly', async ({ baseURL }, testI
       );
     }
   } else {
-    reporter.reportSkip('Refresh token endpoint not found or not functional');
-    test.skip(true, 'Refresh mechanism not testable');
+    reporter.reportWarning(
+      'Refresh-token lifecycle validation failed because no refresh endpoint was found or it was not functional.',
+      [
+        'Implement and document a refresh-token endpoint',
+        'Ensure refresh route is enabled in CI and non-production environments',
+        'Return a new access token (and ideally rotate refresh tokens) on refresh'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
   }
 });
 
@@ -330,8 +372,15 @@ test('Token Lifecycle: logout invalidates tokens', async ({ baseURL }, testInfo)
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Logout token-invalidation check could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in CI before running token lifecycle tests',
+        'Ensure Playwright baseURL points to the deployed target environment',
+        'Fail the pipeline earlier when baseURL is missing to avoid incomplete token coverage'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -372,8 +421,15 @@ test('Token Lifecycle: logout invalidates tokens', async ({ baseURL }, testInfo)
   }
   
   if (!token) {
-    reporter.reportSkip('Could not obtain token for logout testing');
-    test.skip(true, 'Could not obtain token');
+    reporter.reportWarning(
+      'Logout token-invalidation check could not run because no token was obtained.',
+      [
+        'Ensure login endpoint returns an access token for test users',
+        'Verify auth routes are reachable in the CI target environment',
+        'Document auth token transport mechanism for lifecycle testing'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -397,8 +453,15 @@ test('Token Lifecycle: logout invalidates tokens', async ({ baseURL }, testInfo)
   }
   
   if (!tokenWorksBeforeLogout) {
-    reporter.reportSkip('Token not accepted before logout - cannot test invalidation');
-    test.skip(true, 'Token not functional');
+    reporter.reportWarning(
+      'Logout token-invalidation check could not run because the token was not accepted before logout.',
+      [
+        'Ensure protected endpoints accept valid pre-logout tokens in the CI target environment',
+        'Verify the test is using the correct auth transport (bearer token vs cookie)',
+        'Stabilize authentication flow before testing logout invalidation'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -422,8 +485,15 @@ test('Token Lifecycle: logout invalidates tokens', async ({ baseURL }, testInfo)
   }
   
   if (!logoutFound) {
-    reporter.reportSkip('No logout endpoint found');
-    test.skip(true, 'Logout endpoint not found');
+    reporter.reportWarning(
+      'Logout token-invalidation check failed because no logout endpoint was found.',
+      [
+        'Implement and document a logout endpoint for token invalidation',
+        'Ensure logout route is enabled in CI and non-production environments',
+        'Invalidate tokens server-side or revoke them via blacklist on logout'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -474,8 +544,15 @@ test('Token Lifecycle: reasonable expiration times', async ({ baseURL }, testInf
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Token-expiration-time validation could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in CI before running token lifecycle tests',
+        'Ensure Playwright baseURL points to the deployed target environment',
+        'Fail the pipeline earlier when baseURL is missing to avoid incomplete token coverage'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -516,8 +593,15 @@ test('Token Lifecycle: reasonable expiration times', async ({ baseURL }, testInf
   }
   
   if (!token || !token.includes('.')) {
-    reporter.reportSkip('Could not obtain JWT token for expiration check');
-    test.skip(true, 'No JWT token available');
+    reporter.reportWarning(
+      'Token-expiration-time validation could not run because no JWT token was available.',
+      [
+        'Ensure login endpoint returns a JWT token for this test path',
+        'If auth is cookie-based, add equivalent session lifetime checks to this suite',
+        'Document auth token transport mechanism so JWT-specific tests target the correct flow'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
     return;
   }
   
@@ -525,8 +609,15 @@ test('Token Lifecycle: reasonable expiration times', async ({ baseURL }, testInf
     // Decode JWT
     const parts = token.split('.');
     if (parts.length !== 3) {
-      reporter.reportSkip('Token is not a valid JWT');
-      test.skip(true, 'Invalid JWT format');
+      reporter.reportWarning(
+        'Token-expiration-time validation failed because the returned token is not a valid JWT structure.',
+        [
+          'Return RFC 7519-compliant JWTs when JWT auth is expected',
+          'If using opaque tokens or cookies, implement equivalent lifetime checks in dedicated tests',
+          'Document token format so lifecycle tests target the correct auth mechanism'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
@@ -579,7 +670,14 @@ test('Token Lifecycle: reasonable expiration times', async ({ baseURL }, testInf
       );
     }
   } catch (e) {
-    reporter.reportSkip('Could not decode JWT token payload');
-    test.skip(true, 'JWT decode failed');
+    reporter.reportWarning(
+      'Token-expiration-time validation failed because the JWT payload could not be decoded.',
+      [
+        'Ensure JWT payload is valid base64url-encoded JSON',
+        'Verify token serialization format in the authentication service',
+        'Add auth contract tests so malformed tokens are caught before CI security stage'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
   }
 });

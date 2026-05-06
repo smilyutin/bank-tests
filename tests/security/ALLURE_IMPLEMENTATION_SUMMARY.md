@@ -197,7 +197,7 @@ When you run `npm run allure:serve`, you'll see:
 7. **Attachments** - Full security report markdown
 8. **Links** - Direct to OWASP documentation
 
-## 🚀 Quick Start Commands
+## Quick Start Commands
 
 ```bash
 # Run all security tests with Allure
@@ -276,7 +276,7 @@ rm -rf allure-results allure-report
 - [x] Documentation created (7 files)
 - [x] Patterns provided for remaining tests
 - [x] Allure reports generating successfully
-- [x] Console output shows status icons (✅ ⏭️ ⚠️ ❌)
+- [x] Console output shows status icons
 - [x] api-10/ directory removed (tests redistributed)
 - [x] .gitignore updated for Allure directories
 
@@ -308,4 +308,4 @@ npm run test:sec
 npm run allure:serve
 ```
 
-Open your browser and explore the beautiful Allure report with OWASP categorization, severity levels, and comprehensive security findings! 🚀
+Open your browser and explore the beautiful Allure report with OWASP categorization, severity levels, and comprehensive security findings!

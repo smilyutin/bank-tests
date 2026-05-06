@@ -1,11 +1,21 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 test('CSP: Content-Security-Policy header present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP header-presence probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -20,10 +30,19 @@ test('CSP: Content-Security-Policy header present', async ({ page }, testInfo) =
 });
 
 test('CSP: script-src directive is restrictive', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP script-src probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -31,7 +50,15 @@ test('CSP: script-src directive is restrictive', async ({ page }, testInfo) => {
   const csp = headers['content-security-policy'];
 
   if (!csp) {
-    test.skip(true, 'No CSP header found');
+    reporter.reportWarning(
+      'CSP script-src probe failed because no Content-Security-Policy header was found.',
+      [
+        'Add a Content-Security-Policy header to all HTML responses',
+        'Define at minimum default-src and script-src directives',
+        'Use policy-as-code or gateway config checks to prevent CSP regressions'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -67,10 +94,19 @@ test('CSP: script-src directive is restrictive', async ({ page }, testInfo) => {
 });
 
 test('CSP: default-src is restrictive', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP default-src probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -78,7 +114,15 @@ test('CSP: default-src is restrictive', async ({ page }, testInfo) => {
   const csp = headers['content-security-policy'];
 
   if (!csp) {
-    test.skip(true, 'No CSP header found');
+    reporter.reportWarning(
+      'CSP default-src probe failed because no Content-Security-Policy header was found.',
+      [
+        'Add a Content-Security-Policy header to all HTML responses',
+        'Define a restrictive default-src directive',
+        'Use deployment checks to block releases missing CSP headers'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -97,10 +141,19 @@ test('CSP: default-src is restrictive', async ({ page }, testInfo) => {
 });
 
 test('CSP: object-src is restricted', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP object-src probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -108,7 +161,15 @@ test('CSP: object-src is restricted', async ({ page }, testInfo) => {
   const csp = headers['content-security-policy'];
 
   if (!csp) {
-    test.skip(true, 'No CSP header found');
+    reporter.reportWarning(
+      'CSP object-src probe failed because no Content-Security-Policy header was found.',
+      [
+        'Add a Content-Security-Policy header to all HTML responses',
+        "Include object-src 'none' to block plugin object execution",
+        'Use deployment checks to block releases missing CSP headers'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -132,10 +193,19 @@ test('CSP: object-src is restricted', async ({ page }, testInfo) => {
 });
 
 test('CSP: base-uri is restricted', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP base-uri probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -143,7 +213,15 @@ test('CSP: base-uri is restricted', async ({ page }, testInfo) => {
   const csp = headers['content-security-policy'];
 
   if (!csp) {
-    test.skip(true, 'No CSP header found');
+    reporter.reportWarning(
+      'CSP base-uri probe failed because no Content-Security-Policy header was found.',
+      [
+        'Add a Content-Security-Policy header to all HTML responses',
+        "Include base-uri 'self' or base-uri 'none' to prevent base-tag injection",
+        'Use deployment checks to block releases missing CSP headers'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
@@ -163,16 +241,33 @@ test('CSP: base-uri is restricted', async ({ page }, testInfo) => {
 });
 
 test('CSP: upgrade-insecure-requests directive present (if HTTPS)', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning(
+      'CSP upgrade-insecure-requests probe could not run because no HTTP response was received from the base page.',
+      [
+        'Ensure BASE_URL points to a reachable web application',
+        'Stabilize startup/health checks before running header security tests',
+        'Fail CI earlier when homepage reachability checks fail'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 
   const url = page.url();
   if (!url.startsWith('https://')) {
-    test.skip(true, 'Not using HTTPS');
+    reporter.reportWarning(
+      'CSP upgrade-insecure-requests probe could not validate because the target is not using HTTPS.',
+      [
+        'Run this probe against an HTTPS environment',
+        'Enable TLS in test/staging environments to validate transport security controls',
+        'Add HTTPS readiness checks before running strict header tests'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
     return;
   }
 

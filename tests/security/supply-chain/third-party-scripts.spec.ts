@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * Third-Party Scripts Security Tests
@@ -143,7 +144,14 @@ test('Third-party scripts: CSP allows only trusted domains', async ({ page }, te
 });
 
 test('Third-party scripts: no inline event handlers', async ({ page }, testInfo) => {
-  await page.goto('/');
+  const reporter = new SecurityReporter(testInfo);
+  const response = await page.goto('/').catch(() => null);
+
+  if (!response) {
+    reporter.reportSkip('Base page is not reachable; unable to inspect DOM for inline event handlers.');
+    test.skip(true, 'Base page is not reachable');
+    return;
+  }
   
   const inlineHandlers = await page.evaluate(() => {
     const elements = Array.from(document.querySelectorAll('*'));
@@ -152,19 +160,33 @@ test('Third-party scripts: no inline event handlers', async ({ page }, testInfo)
     elements.forEach(el => {
       const attrs = Array.from(el.attributes);
       attrs.forEach(attr => {
-        if (attr.name.startsWith('on')) {
-          handlers.push(`${el.tagName}.${attr.name}`);
+        // Only count executable inline handlers (non-empty values) to avoid false positives
+        if (attr.name.startsWith('on') && (attr.value || '').trim().length > 0) {
+          handlers.push(`${el.tagName}.${attr.name}="${(attr.value || '').trim().slice(0, 80)}"`);
         }
       });
     });
     
-    return handlers.slice(0, 10); // Limit output
+    return Array.from(new Set(handlers)).slice(0, 10); // Dedupe and limit output
   });
 
-  softCheck(
-    testInfo,
-    inlineHandlers.length === 0,
-    `Inline event handlers found (security risk): ${inlineHandlers.join(', ') || 'none'}`
+  if (inlineHandlers.length > 0) {
+    reporter.reportWarning(
+      `Inline event handlers found (security risk): ${inlineHandlers.join(', ')}`,
+      [
+        'Remove inline event handlers (onclick, onerror, onload, etc.) from HTML markup.',
+        'Bind events using external JavaScript modules (addEventListener) after DOM load.',
+        'Enforce CSP without unsafe-inline and use nonces/hashes for any required inline code.',
+        'Add CI checks to block new on* attributes in templates and rendered views.'
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
+    return;
+  }
+
+  reporter.reportPass(
+    'No inline DOM event handlers detected on the evaluated page.',
+    OWASP_VULNERABILITIES.API8_INJECTION.name
   );
 });
 

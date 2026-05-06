@@ -50,8 +50,15 @@ test('Mass assignment: creating user should not allow isAdmin=true', async ({ ba
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Mass-assignment admin-field probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI configuration before security tests run',
+        'Ensure Playwright baseURL points to the target application under test',
+        'Fail pipeline early when baseURL is missing to avoid incomplete security coverage',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
     return;
   }
   
@@ -107,8 +114,15 @@ test('Mass assignment: creating user should not allow isAdmin=true', async ({ ba
   
   // Step 6: Skip if no user creation endpoint found
   if (!found) {
-    reporter.reportSkip('No user-create endpoint found to test mass assignment');
-    test.skip(true, 'No user-create endpoint found to test mass assignment'); 
+    reporter.reportWarning(
+      `No user-create endpoint responded for isAdmin mass-assignment probe. Tried: ${candidateCreatePaths.join(', ')}`,
+      [
+        'Expose/document a stable user-creation endpoint in API specification',
+        'Ensure non-production environments include registration endpoints used by security tests',
+        'Add OpenAPI metadata so automated tests can discover the correct create-user route',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
     return; 
   }
 });
@@ -123,8 +137,15 @@ test('Mass assignment: creating user should not allow role assignment', async ({
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportWarning(
+      'Mass-assignment role-field probe could not run because baseURL is not provided.',
+      [
+        'Set BASE_URL in .env or CI configuration before security tests run',
+        'Ensure Playwright baseURL points to the target application under test',
+        'Fail pipeline early when baseURL is missing to avoid incomplete security coverage',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
     return;
   }
   
@@ -173,7 +194,15 @@ test('Mass assignment: creating user should not allow role assignment', async ({
   }
   
   if (!found) {
-    reporter.reportSkip('No user-create endpoint found to test role mass assignment');
-    test.skip(true, 'No user-create endpoint found to test role mass assignment'); 
+    reporter.reportWarning(
+      `No user-create endpoint responded for role mass-assignment probe. Tried: ${candidateCreatePaths.join(', ')}`,
+      [
+        'Expose/document a stable user-creation endpoint in API specification',
+        'Ensure non-production environments include registration endpoints used by security tests',
+        'Add OpenAPI metadata so automated tests can discover the correct create-user route',
+      ],
+      OWASP_VULNERABILITIES.API6_MASS_ASSIGNMENT.name
+    );
+    return;
   }
 });

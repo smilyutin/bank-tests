@@ -1,6 +1,6 @@
 # Security Testing Quick Reference
 
-## 🚀 Quick Commands
+## Quick Commands
 
 ```bash
 # Run all security tests

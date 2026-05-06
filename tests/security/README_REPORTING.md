@@ -7,7 +7,7 @@ Your security tests now generate **comprehensive, actionable reports** with:
 - ✅ **Pass/Fail Status** - Clear test results
 - 🔴 **Risk Levels** - CRITICAL, HIGH, MEDIUM, LOW ratings
 - 📋 **Detailed Recommendations** - Specific actions to fix vulnerabilities
-- 🔧 **Step-by-Step Remediation** - How to fix each issue
+- **Step-by-Step Remediation** - How to fix each issue
 - 📚 **OWASP References** - Links to security best practices
 - 📊 **Evidence** - JSON data showing exactly what failed
 
@@ -22,7 +22,7 @@ tests/security/
 └── QUICK_START_GUIDE.md          # 5-minute integration guide
 ```
 
-## 🚀 Quick Example
+## Quick Example
 
 ### Before (Basic Test):
 ```typescript
@@ -80,7 +80,7 @@ test('Check password exposure', async ({ baseURL }, testInfo) => {
 3. Implement response filtering based on user permissions
 ...
 
-## 🔧 Remediation Steps
+## Remediation Steps
 1. Audit all API responses for sensitive data exposure
 2. Create serializers/DTOs that explicitly define allowed fields
 3. Remove password hashes, tokens, and internal IDs from responses
@@ -129,7 +129,7 @@ All reports map to **OWASP API Security Top 10 2023**:
 | 9 | Improper Inventory Management | 🟡 MEDIUM | ✅ |
 | 10 | Unsafe API Consumption | 🟡 MEDIUM | ✅ |
 
-## 🔧 Already Integrated
+## Already Integrated
 
 The reporting system is **already active** in:
 
@@ -257,7 +257,7 @@ High Priority Issues:
 
 All evidence is **sanitized test data only**.
 
-## 🚀 Next Steps
+## Next Steps
 
 ### Immediate (Today)
 1. ✅ Run existing tests and review reports

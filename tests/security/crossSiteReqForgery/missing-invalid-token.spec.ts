@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * CSRF Token Validation Tests
@@ -40,17 +41,34 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * 3. Verify all requests are rejected with appropriate error codes
  */
 test('CSRF: requests without token are rejected', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'CSRF missing-token probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before CSRF security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   // Step 1: Authenticate as a valid user to get session token
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'CSRF missing-token probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so CSRF probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -115,17 +133,34 @@ test('CSRF: requests without token are rejected', async ({ request }, testInfo) 
  * 3. Verify all invalid tokens are rejected with 403/401 status
  */
 test('CSRF: invalid token is rejected', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'CSRF invalid-token probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before CSRF security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   // Step 1: Authenticate as a valid user
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'CSRF invalid-token probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so CSRF probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -193,17 +228,34 @@ test('CSRF: invalid token is rejected', async ({ request }, testInfo) => {
  * - None: Always send (requires Secure flag, lowest security)
  */
 test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'CSRF SameSite-cookie probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before CSRF security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
   // Step 1: Perform login to capture cookie headers
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'CSRF SameSite-cookie probe could not run because login failed.',
+      [
+        'Ensure login endpoint is reachable for test users',
+        'Verify authentication flow in the target environment before CSRF checks',
+        'Fail CI earlier if authentication smoke checks fail',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
     return;
   }
 
@@ -226,7 +278,15 @@ test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
     );
   } else {
     // Step 5: Handle case where no cookies are set
-    test.skip(true, 'No cookies set during login');
+    reporter.reportWarning(
+      'CSRF SameSite-cookie probe failed because no cookies were set during login.',
+      [
+        'Ensure authenticated sessions issue cookies when cookie-based auth is used',
+        'If using bearer-only auth, add equivalent CSRF/session protection checks and document non-applicability',
+        'Set SameSite=Lax or SameSite=Strict for session cookies where applicable',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
   }
 });
 
@@ -247,6 +307,7 @@ test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
  * - Custom Headers: Token in custom HTTP headers
  */
 test('CSRF: double submit cookie pattern or synchronizer token', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     // Step 1: Navigate to the application homepage
     await page.goto('/');
@@ -274,7 +335,15 @@ test('CSRF: double submit cookie pattern or synchronizer token', async ({ page }
     );
   } catch (e) {
     // Step 5: Handle navigation errors
-    test.skip(true, 'Page not available');
+    reporter.reportWarning(
+      'CSRF protection-implementation probe could not run because the page was not available.',
+      [
+        'Ensure BASE_URL points to a reachable web UI in the test environment',
+        'Stabilize application startup and health checks before UI security tests run',
+        'Fail CI earlier when homepage availability checks fail',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
   }
 });
 
@@ -297,6 +366,7 @@ test('CSRF: double submit cookie pattern or synchronizer token', async ({ page }
  * - Cookies (for double-submit pattern)
  */
 test('CSRF: token not leaked in URL', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     // Step 1: Navigate to the application homepage
     await page.goto('/');
@@ -320,6 +390,14 @@ test('CSRF: token not leaked in URL', async ({ page }, testInfo) => {
     );
   } catch (e) {
     // Step 5: Handle navigation errors
-    test.skip(true, 'Page not available');
+    reporter.reportWarning(
+      'CSRF token-in-URL probe could not run because the page was not available.',
+      [
+        'Ensure BASE_URL points to a reachable web UI in the test environment',
+        'Stabilize application startup and health checks before UI security tests run',
+        'Fail CI earlier when homepage availability checks fail',
+      ],
+      OWASP_VULNERABILITIES.API8_INJECTION.name
+    );
   }
 });

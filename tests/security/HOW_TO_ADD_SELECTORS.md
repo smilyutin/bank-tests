@@ -4,7 +4,7 @@ Quick guide for configuring tests for different HTML structures.
 
 ---
 
-## 🚀 Quick Start (3 Steps)
+## Quick Start (3 Steps)
 
 ### Step 1: Run Auto-Discovery
 
@@ -269,7 +269,7 @@ errorMessage: ['#message'],  // ✅
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Problem: "Login form not found"
 

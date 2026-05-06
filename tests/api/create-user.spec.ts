@@ -1,6 +1,8 @@
 import { test, expect, request } from '@playwright/test';
 import { RegisterPage } from '../ui/pages/registerPage';
 import { saveUser } from '../utils/credentials';
+import { validateSchema } from '../utils/schema-validator';
+import { SecurityReporter } from '../security/security-reporter';
 
 /**
  * API User Creation Tests
@@ -42,7 +44,11 @@ test.describe('API - Create user account', () => {
   test('should create a user via API', async ({ baseURL, browser }, testInfo) => {
     if (!baseURL) throw new Error('baseURL is not defined');
 
+    const reporter = new SecurityReporter(testInfo);
     const apiContext = await request.newContext({ baseURL: baseURL.toString() });
+    //validate schema
+
+    //await validateSchema('register-schema', 'GET_register');
 
     // Step 1: Generate random test credentials
     const random = Math.random().toString(36).substring(2, 8);
@@ -58,6 +64,7 @@ test.describe('API - Create user account', () => {
 
     const tried: Array<{ path: string; status: number | string }> = [];
     let successResponse = null;
+    let successPath: string | null = null;
 
     // Step 3: Try each candidate endpoint with both form-data and JSON
     for (const path of candidates) {
@@ -67,6 +74,7 @@ test.describe('API - Create user account', () => {
         tried.push({ path: `${path} (form)`, status: resForm.status() });
         if ([200, 201, 302, 303, 409].includes(resForm.status())) {
           successResponse = resForm;
+          successPath = `${path} (form)`;
           break;
         }
       } catch (e: any) {
@@ -77,6 +85,7 @@ test.describe('API - Create user account', () => {
         tried.push({ path: `${path} (json)`, status: resJson.status() });
         if ([200, 201, 302, 303, 409].includes(resJson.status())) {
           successResponse = resJson;
+          successPath = `${path} (json)`;
           break;
         }
       } catch (e: any) {
@@ -136,6 +145,7 @@ test.describe('API - Create user account', () => {
             tried.push({ path: `${actionPath} (form submit)`, status: regPost.status() });
             if ([200, 201, 302, 303, 409].includes(regPost.status())) {
               successResponse = regPost;
+              successPath = `${actionPath} (form submit)`;
               // persist created account
               saveUser({ email: payload.email, password: payload.password });
             }
@@ -171,12 +181,12 @@ test.describe('API - Create user account', () => {
                     try {
                       const res1 = await apiContext.post(p, { data: payload });
                       tried.push({ path: `${p} (form)`, status: res1.status() });
-                      if ([200, 201, 302, 303, 409].includes(res1.status())) { successResponse = res1; break; }
+                      if ([200, 201, 302, 303, 409].includes(res1.status())) { successResponse = res1; successPath = `${p} (form)`; break; }
                     } catch (e: any) { tried.push({ path: `${p} (form)`, status: e.message || 'error' }); }
                     try {
                       const res2 = await apiContext.post(p, { data: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
                       tried.push({ path: `${p} (json)`, status: res2.status() });
-                      if ([200, 201, 302, 303, 409].includes(res2.status())) { successResponse = res2; break; }
+                      if ([200, 201, 302, 303, 409].includes(res2.status())) { successResponse = res2; successPath = `${p} (json)`; break; }
                     } catch (e: any) { tried.push({ path: `${p} (json)`, status: e.message || 'error' }); }
                   }
                 }
@@ -209,12 +219,12 @@ test.describe('API - Create user account', () => {
                       try {
                         const res1 = await apiContext.post(p, { data: payload });
                         tried.push({ path: `${p} (form)`, status: res1.status() });
-                        if ([200, 201, 302, 303, 409].includes(res1.status())) { successResponse = res1; break; }
+                        if ([200, 201, 302, 303, 409].includes(res1.status())) { successResponse = res1; successPath = `${p} (form)`; break; }
                       } catch (e: any) { tried.push({ path: `${p} (form)`, status: e.message || 'error' }); }
                       try {
                         const res2 = await apiContext.post(p, { data: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
                         tried.push({ path: `${p} (json)`, status: res2.status() });
-                        if ([200, 201, 302, 303, 409].includes(res2.status())) { successResponse = res2; break; }
+                        if ([200, 201, 302, 303, 409].includes(res2.status())) { successResponse = res2; successPath = `${p} (json)`; break; }
                       } catch (e: any) { tried.push({ path: `${p} (json)`, status: e.message || 'error' }); }
                     }
                   }
@@ -253,6 +263,7 @@ test.describe('API - Create user account', () => {
             status: () => 200,
             json: async () => ({ email })
           } as any;
+          successPath = 'ui-register-fallback';
         }
         await page.close();
       } catch (e: any) {
@@ -262,6 +273,15 @@ test.describe('API - Create user account', () => {
 
     if (!successResponse) {
       testInfo.attach('tried-endpoints', { body: JSON.stringify(tried, null, 2), contentType: 'application/json' });
+      reporter.reportWarning(
+        'No user-creation endpoint could be exercised successfully through API or registration fallback flows.',
+        [
+          'Expose and document a stable registration endpoint for test and automation environments.',
+          'Support at least one standard payload format (form or JSON) for account creation.',
+          'Ensure registration routes are included in OpenAPI/Swagger docs when available.'
+        ],
+        'API9:2023 - Improper Inventory Management'
+      );
       throw new Error(`Could not find a user-creation endpoint. Tried: ${JSON.stringify(tried)}`);
     }
 
@@ -270,5 +290,10 @@ test.describe('API - Create user account', () => {
     if ([200, 201].includes((successResponse as any).status())) {
       expect(body).toBeTruthy();
     }
+
+    reporter.reportPass(
+      `User creation flow completed successfully via ${successPath || 'unknown path'} with status ${(successResponse as any).status()}.`,
+      'API2:2023 - Broken Authentication'
+    );
   });
 });

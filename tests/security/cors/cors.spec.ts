@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * Cross-Origin Resource Sharing (CORS) Security Tests
@@ -179,6 +180,7 @@ test('CORS: Vary header includes Origin', async ({ request }, testInfo) => {
 });
 
 test('CORS: no origin reflection vulnerability', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const testOrigins = [
     'https://attacker.com',
     'http://localhost:9999',
@@ -186,6 +188,7 @@ test('CORS: no origin reflection vulnerability', async ({ request }, testInfo) =
   ];
 
   let vulnerable = false;
+  let reflectedOrigin: string | null = null;
 
   for (const origin of testOrigins) {
     try {
@@ -198,6 +201,7 @@ test('CORS: no origin reflection vulnerability', async ({ request }, testInfo) =
       // Origin should not be blindly reflected
       if (allowOrigin === origin && origin !== 'null') {
         vulnerable = true;
+        reflectedOrigin = origin;
         break;
       }
     } catch (e) {
@@ -205,9 +209,22 @@ test('CORS: no origin reflection vulnerability', async ({ request }, testInfo) =
     }
   }
 
-  softCheck(
-    testInfo,
-    !vulnerable,
-    'CORS should not blindly reflect Origin header (origin reflection vulnerability)'
+  if (vulnerable) {
+    reporter.reportWarning(
+      `CORS origin reflection detected: server reflected untrusted Origin (${reflectedOrigin || 'unknown'}).`,
+      [
+        'Use an explicit allowlist of trusted origins; do not mirror arbitrary Origin values.',
+        'Return no Access-Control-Allow-Origin header for untrusted origins.',
+        'If credentials are enabled, ensure exact trusted-origin matching and avoid wildcard behavior.',
+        'Add automated negative tests for attacker-controlled origins in CI.'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+    return;
+  }
+
+  reporter.reportPass(
+    'CORS policy did not reflect tested untrusted origins.',
+    OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
   );
 });

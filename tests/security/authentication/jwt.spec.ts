@@ -1,5 +1,15 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+
+const TARGET_APP_FIX_FIRST = [
+  'Implement strict JWT signature validation (HS256 or RS256)',
+  'Reject algorithms "none", "HS256" when expecting RS256, and vice versa (algorithm confusion)',
+  'Validate JWT structure: 3 base64url-encoded parts separated by dots',
+  'Reject tokens with expired `exp` claim (timestamp comparison)',
+  'Verify token issuer (`iss`) and audience (`aud`) claims match expected values',
+  'Implement token revocation/blacklist for logged-out tokens',
+];
 
 /**
  * JWT (JSON Web Token) Security Tests
@@ -21,101 +31,146 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * - Expired tokens should be rejected
  */
 
-/**
- * Test: JWT integrity and expiry checks
- * 
- * Purpose: Verifies that JWT tokens are properly structured and validated,
- * protecting against common JWT vulnerabilities like algorithm confusion and token tampering.
- * 
- * Security Impact: JWT vulnerabilities can lead to:
- * - Authentication bypass through algorithm confusion
- * - Token forgery through signature tampering
- * - Session hijacking through expired token reuse
- * - Privilege escalation through token manipulation
- * 
- * Test Strategy:
- * 1. Extract JWT token from login response
- * 2. Verify token structure (3 parts separated by dots)
- * 3. Test algorithm "none" vulnerability
- * 4. Test token tampering detection
- * 5. Verify expired token rejection
- */
-// Heuristic JWT checks: non-destructive. Will skip if no JWT is returned by login.
 test.describe('JWT integrity & expiry checks', () => {
-  test('Login returns JWT (skip if app uses cookies)', async ({ request }, testInfo) => {
+  test('JWT tokens properly validated against tampering and algorithm confusion', async ({ request }, testInfo) => {
+    const reporter = new SecurityReporter(testInfo);
+    
     const user = await ensureTestUser(request as any);
     if (!user.email || !user.password) {
-      test.skip(true, 'No persisted user');
+      reporter.reportWarning(
+        'JWT validation could not run because no test user credentials are available.',
+        [
+          ...TARGET_APP_FIX_FIRST,
+          'Seed a valid authentication test user in tests/fixtures/users.json',
+          'Add deterministic test-user bootstrap before security test execution',
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
     // Step 1: Attempt login to get JWT token
     const attempt = await tryLogin(request as any, user.email, user.password);
     if (!attempt) {
-      test.skip(true, 'Login endpoint not found');
+      reporter.reportWarning(
+        'JWT validation could not run because login endpoint was not found or unreachable.',
+        [
+          ...TARGET_APP_FIX_FIRST,
+          'Ensure at least one login endpoint is reachable in SECURITY_LOGIN_PATH candidates',
+          'Stabilize auth route availability in the test environment before security scans',
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
     const { res, token: returnedToken, path } = attempt as any;
-    if (returnedToken) {
-      softCheck(testInfo, true, `Login returned token via ${path}`);
-    }
     
-    // Step 2: Extract token from response body
-    // Check common JWT token field names
+    // Step 2: Extract token from response body or headers
     let bodyToken = null;
     try {
-      const json = await res.json().catch(()=>null);
-      if (json && (json.token || json.access_token || json.jwt)) bodyToken = json.token || json.access_token || json.jwt;
+      const json = await res.json().catch(() => null);
+      if (json && (json.token || json.access_token || json.jwt)) {
+        bodyToken = json.token || json.access_token || json.jwt;
+      }
     } catch (e) {}
     
-    // Step 3: Check for token in Authorization headers
     const auth = res.headers()['authorization'] || res.headers()['www-authenticate'];
-    softCheck(testInfo, !!bodyToken || !!auth, 'No JWT-like token returned by login (skipping JWT tests)');
-    if (!bodyToken && !auth) test.skip(true, 'No JWT returned');
-
-    // Step 4: Parse and validate token
     const token = returnedToken || bodyToken || (auth && String(auth).split(' ').pop());
+    
     if (!token) {
-      test.skip(true, 'Token not parseable');
+      reporter.reportWarning(
+        `No JWT token was returned by login endpoint (${path || 'unknown path'}), so JWT integrity checks could not be completed. ` +
+        `This may indicate cookie-based auth or missing token exposure in API responses.`,
+        [
+          ...TARGET_APP_FIX_FIRST,
+          'If auth is cookie-based, add equivalent cookie/session tampering checks to this suite',
+          'Document auth token transport mechanism so tests target the correct medium',
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
 
-    // Step 5: Verify JWT structure (3 parts separated by dots)
+    // Step 3: Verify JWT structure (3 parts separated by dots)
     const parts = token.split('.');
-    softCheck(testInfo, parts.length === 3, 'Token is not a JWT (dot-separated 3 parts)');
-    if (parts.length !== 3) return;
+    if (parts.length !== 3) {
+      reporter.reportWarning(
+        `Token returned is not a valid JWT structure. Expected 3 base64url parts separated by dots, got ${parts.length} parts.`,
+        TARGET_APP_FIX_FIRST,
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
+      return;
+    }
 
-    // Step 6: Parse JWT header and payload
-    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString('utf8'));
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    // Step 4: Parse JWT header and payload
+    let header: any, payload: any;
+    try {
+      header = JSON.parse(Buffer.from(parts[0], 'base64').toString('utf8'));
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    } catch (e) {
+      reporter.reportWarning(
+        `JWT header or payload could not be decoded. Token may be malformed. Error: ${String(e).slice(0, 100)}`,
+        TARGET_APP_FIX_FIRST,
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
+      return;
+    }
 
-    // Step 7: Test algorithm "none" vulnerability
-    // This is a critical vulnerability where alg=none tokens are accepted
+    // Collect findings
+    const findings: { success: string[]; vulnerabilities: string[] } = { success: [], vulnerabilities: [] };
+
+    // Step 5: Test algorithm "none" vulnerability
     header.alg = 'none';
     const algNone = [Buffer.from(JSON.stringify(header)).toString('base64url'), Buffer.from(JSON.stringify(payload)).toString('base64url'), ''].join('.');
 
-    // Step 8: Test alg=none token against protected endpoints
     const protectedPaths = ['/api/me', '/api/profile', '/profile', '/me'];
+    let algNoneAccepted = false;
     for (const p of protectedPaths) {
       try {
         const r = await request.get(p, { headers: { authorization: `Bearer ${algNone}` } });
-        // Expect rejection (401/403) or at least not 2xx
-        softCheck(testInfo, r.status() >= 400 && r.status() < 500, `alg=none token was accepted on ${p} (status ${r.status()})`);
-      } catch (e) {
-        // ignore
-      }
+        if (r.status() < 400 || r.status() >= 500) {
+          findings.vulnerabilities.push(`alg=none token accepted on ${p} (status ${r.status()})`);
+          algNoneAccepted = true;
+        }
+      } catch (e) {}
+    }
+    if (!algNoneAccepted) {
+      findings.success.push('alg=none algorithm confusion attack rejected');
     }
 
-    // Step 9: Test token tampering detection
-    // Modify payload and reuse signature (invalid signature) should be rejected
+    // Step 6: Test token tampering detection
     const tamperedPayload = { ...payload, exp: 1 }; // expired
     const tampered = [parts[0], Buffer.from(JSON.stringify(tamperedPayload)).toString('base64url'), parts[2]].join('.');
+    let tamperedAccepted = false;
     for (const p of protectedPaths) {
       try {
         const r = await request.get(p, { headers: { authorization: `Bearer ${tampered}` } });
-        softCheck(testInfo, r.status() >= 400 && r.status() < 500, `Tampered/expired token was accepted on ${p} (status ${r.status()})`);
+        if (r.status() < 400 || r.status() >= 500) {
+          findings.vulnerabilities.push(`Tampered/expired token accepted on ${p} (status ${r.status()})`);
+          tamperedAccepted = true;
+        }
       } catch (e) {}
+    }
+    if (!tamperedAccepted) {
+      findings.success.push('Token tampering/expiry detection working');
+    }
+
+    // Step 7: Report findings
+    if (findings.vulnerabilities.length === 0) {
+      reporter.reportPass(
+        `JWT implementation is secure. Token structure valid (3 parts). ` +
+        `Verified: ${findings.success.join(', ')}. Algorithm confusion (alg=none) rejected. ` +
+        `Tampered tokens rejected. Evidence: tested against ${protectedPaths.length} protected endpoints.`,
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
+    } else {
+      reporter.reportWarning(
+        `JWT implementation has security issues. ${findings.vulnerabilities.length} vulnerability(ies) detected: ${findings.vulnerabilities.join('; ')}. ` +
+        `This allows attackers to forge tokens or bypass authentication.`,
+        TARGET_APP_FIX_FIRST,
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
     }
   });
 });

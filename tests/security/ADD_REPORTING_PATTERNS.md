@@ -365,7 +365,7 @@ reporter.reportWarning(
 - [ ] Include evidence in vulnerability reports
 - [ ] Use correct OWASP category key
 
-## 🚀 Quick Commands
+## Quick Commands
 
 ```bash
 # Test a single file after adding reporting

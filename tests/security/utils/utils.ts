@@ -1,5 +1,6 @@
 import { APIRequestContext, request as playwrightRequest, TestInfo } from '@playwright/test';
 import { loadUsers, createRandomUser, saveUser } from '../../utils/credentials';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 export const LOGIN_CANDIDATES = [
   '/api/login',
@@ -48,21 +49,83 @@ export function parseSetCookieValue(setCookieHeader: string, name: string): stri
   return null;
 }
 
+function inferSoftCheckCategory(message: string): string {
+  const m = message.toLowerCase();
+
+  if (m.includes('cors') || m.includes('header') || m.includes('hsts') || m.includes('csp') || m.includes('referrer') || m.includes('nosniff') || m.includes('frame')) {
+    return OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name;
+  }
+
+  if (m.includes('xss') || m.includes('inline') || m.includes('script') || m.includes('inject') || m.includes('injection')) {
+    return OWASP_VULNERABILITIES.API8_INJECTION.name;
+  }
+
+  if (m.includes('csrf') || m.includes('token') || m.includes('session') || m.includes('auth') || m.includes('login') || m.includes('password')) {
+    return OWASP_VULNERABILITIES.API2_AUTH.name;
+  }
+
+  return OWASP_VULNERABILITIES.API9_ASSET_MGMT.name;
+}
+
+function inferSoftCheckRecommendations(message: string): string[] {
+  const m = message.toLowerCase();
+
+  if (m.includes('cors')) {
+    return [
+      'Use a strict allowlist for trusted origins and do not reflect arbitrary Origin values.',
+      'Return no CORS allow-origin header for untrusted origins and include Vary: Origin when CORS is used.',
+      'Avoid wildcard origin when credentials are enabled.'
+    ];
+  }
+
+  if (m.includes('referrer-policy') || m.includes('header') || m.includes('csp') || m.includes('hsts') || m.includes('nosniff') || m.includes('frame')) {
+    return [
+      'Set required security headers globally at proxy or middleware level.',
+      'Use secure header values aligned with OWASP recommendations.',
+      'Add automated security-header regression checks in CI.'
+    ];
+  }
+
+  if (m.includes('xss') || m.includes('inline') || m.includes('script') || m.includes('injection')) {
+    return [
+      'Sanitize and encode untrusted input before rendering to HTML or JavaScript contexts.',
+      'Eliminate inline scripts/handlers and enforce CSP without unsafe-inline.',
+      'Add negative tests for reflected and stored payloads in CI.'
+    ];
+  }
+
+  if (m.includes('csrf') || m.includes('token')) {
+    return [
+      'Require anti-CSRF tokens for state-changing operations and validate them server-side.',
+      'Rotate CSRF/session tokens on login and privilege changes.',
+      'Use SameSite cookies and origin/referer validation for additional protection.'
+    ];
+  }
+
+  if (m.includes('auth') || m.includes('login') || m.includes('password') || m.includes('session')) {
+    return [
+      'Enforce strong authentication/session controls and explicit access checks.',
+      'Harden credential handling and add rate limiting for auth endpoints.',
+      'Add monitoring and alerting for suspicious authentication events.'
+    ];
+  }
+
+  return [
+    'Review this security control against OWASP API Security Top 10 guidance.',
+    'Document expected secure behavior and enforce it with regression tests.',
+    'Apply least-privilege and secure-by-default configuration principles.'
+  ];
+}
+
 export function softCheck(info: TestInfo, condition: boolean, message: string) {
   if (condition) return;
-  const soft = process.env.SECURITY_SOFT === '1' || process.env.SECURITY_SOFT === 'true';
-  if (soft) {
-    // Attach an annotation and warn instead of failing the test
-    try {
-      info.annotations.push({ type: 'security', description: message });
-    } catch (e) {
-      // ignore
-    }
-    // eslint-disable-next-line no-console
-    console.warn('[SECURITY-WARN]', message);
-  } else {
-    throw new Error(message);
-  }
+
+  const reporter = new SecurityReporter(info);
+  reporter.reportWarning(
+    message,
+    inferSoftCheckRecommendations(message),
+    inferSoftCheckCategory(message)
+  );
 }
 
 export async function findLoginEndpoint(request: APIRequestContext) {

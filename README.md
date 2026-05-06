@@ -4,7 +4,7 @@
 
 Comprehensive Playwright TypeScript test suite with **70+ security tests** covering OWASP API Security Top 10 2023, fuzzing, input anomalies, and CI/CD regression testing.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -19,7 +19,7 @@ npm run test:sec
 npm run allure:serve
 ```
 
-## 📊 Test Suite Overview
+## Test Suite Overview
 
 | Category | Tests | Coverage |
 |----------|-------|----------|
@@ -27,26 +27,26 @@ npm run allure:serve
 | **UI Tests** | 3+ | Signup flows, navigation |
 | **Security Tests** | 70+ | OWASP API Top 10 2023, Fuzzing, CI/CD |
 
-## 🔒 Security Testing (70+ Tests)
+## Security Testing (70+ Tests)
 
 ### OWASP API Security Top 10 2023 - Full Coverage
 
-- ✅ **API1** - Broken Object Level Authorization (IDOR)
-- ✅ **API2** - Broken Authentication (JWT, sessions, tokens)
-- ✅ **API3** - Data Exposure (sensitive fields)
-- ✅ **API4** - Rate Limiting & Resource Consumption
-- ✅ **API5** - Broken Function Level Authorization
-- ✅ **API6** - Mass Assignment
-- ✅ **API7** - Security Misconfiguration (headers, CORS)
-- ✅ **API8** - Injection (SQL, XSS, path traversal, Unicode)
-- ✅ **API9** - Improper Assets Management
-- ✅ **API10** - Insufficient Logging & Monitoring
+- **API1** - Broken Object Level Authorization (IDOR)
+- **API2** - Broken Authentication (JWT, sessions, tokens)
+- **API3** - Data Exposure (sensitive fields)
+- **API4** - Rate Limiting & Resource Consumption
+- **API5** - Broken Function Level Authorization
+- **API6** - Mass Assignment
+- **API7** - Security Misconfiguration (headers, CORS)
+- **API8** - Injection (SQL, XSS, path traversal, Unicode)
+- **API9** - Improper Assets Management
+- **API10** - Insufficient Logging & Monitoring
 
 ### Advanced Security Testing
 
-- 🎲 **Fuzzing** (10 tests) - Random inputs, malformed JSON, boundary values
-- 🔍 **Input Anomalies** (14 tests) - Unicode, escape sequences, file traversal
-- 🔄 **CI/CD Regression** (15 tests) - Automated security validation, token lifecycle
+- **Fuzzing** (10 tests) - Random inputs, malformed JSON, boundary values
+- **Input Anomalies** (14 tests) - Unicode, escape sequences, file traversal
+- **CI/CD Regression** (15 tests) - Automated security validation, token lifecycle
 
 ### Security Test Categories
 
@@ -59,21 +59,21 @@ tests/security/
 ├── crossSiteReqForgery/ CSRF token validation
 ├── headers/            CSP, HSTS, X-Frame-Options, etc.
 ├── input/              XSS, SQL injection, file upload
-├── fuzzing/            ✨ Random inputs, malformed JSON, boundaries
-├── input-attack/       ✨ Unicode, escape chars, path traversal
-├── ci/                 ✨ Regression, token expiry, audit
+├── fuzzing/            Random inputs, malformed JSON, boundaries
+├── input-attack/       Unicode, escape chars, path traversal
+├── ci/                 Regression, token expiry, audit
 └── supply-chain/       Dependency security, SRI
 ```
 
-## 📈 Reporting & Visualization
+## Reporting & Visualization
 
 ### Allure Reports
 Beautiful interactive reports with:
-- 📊 Dashboard with pass/fail statistics
-- 🔴 Severity-based categorization (blocker, critical, normal, minor)
-- 🏷️ OWASP API Top 10 tagging
-- 📈 Historical trend tracking
-- 🔗 Direct links to OWASP documentation
+- Dashboard with pass/fail statistics
+- Severity-based categorization (blocker, critical, normal, minor)
+- OWASP API Top 10 tagging
+- Historical trend tracking
+- Direct links to OWASP documentation
 
 ```bash
 # Generate and view Allure report
@@ -86,14 +86,14 @@ npm run allure:open
 
 ### SecurityReporter
 Every test includes comprehensive reporting:
-- ✅ **Status**: Pass/Fail/Warning/Skip
-- 🔴 **Risk Level**: CRITICAL/HIGH/MEDIUM/LOW/INFO
-- 📋 **Recommendations**: 5-8 actionable fixes
-- 🔧 **Remediation Steps**: Step-by-step guides
-- 📚 **OWASP References**: Direct documentation links
-- 📊 **Evidence**: JSON payload captures
+- **Status**: Pass/Fail/Warning/Skip
+- **Risk Level**: CRITICAL/HIGH/MEDIUM/LOW/INFO
+- **Recommendations**: 5-8 actionable fixes
+- **Remediation Steps**: Step-by-step guides
+- **OWASP References**: Direct documentation links
+- **Evidence**: JSON payload captures
 
-## 🎯 Running Tests
+## Running Tests
 
 ### All Tests
 ```bash
@@ -129,7 +129,7 @@ npm run allure:serve
 npx playwright test tests/security/ci/scan-results-audit.spec.ts
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 ```bash

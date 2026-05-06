@@ -9,7 +9,7 @@ All security tests now support **Allure Reports** for beautiful, interactive tes
 - 📋 Detailed vulnerability reports with evidence
 - 🔗 Links to OWASP documentation
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Run Tests with Allure Reporting
 
@@ -61,7 +61,7 @@ The `SecurityReporter` automatically adds:
 ### Test Status Visualization
 
 - ✅ **PASS** - Green checkmark, security control verified
-- ❌ **FAIL** - Red X, vulnerability found with full details
+- **FAIL** - Red X, vulnerability found with full details
 - ⚠️ **WARNING** - Yellow triangle, passed but with concerns
 - ⏭️ **SKIP** - Gray dash, test couldn't run
 
@@ -178,7 +178,7 @@ The above test generates an Allure report with:
 **Description:**
 "No sensitive fields exposed in API response. API3:2023 - Broken Object Property Level Authorization verified."
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### Custom Categories
 
@@ -297,7 +297,7 @@ if (vulnerable) {
 }
 ```
 
-## 🚀 CI/CD Integration
+## CI/CD Integration
 
 ### GitHub Actions
 

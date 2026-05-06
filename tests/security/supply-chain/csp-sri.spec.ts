@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
 
 /**
  * Content Security Policy (CSP) and Subresource Integrity (SRI) Tests

@@ -1,11 +1,18 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 test('Permissions-Policy: header present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -21,10 +28,16 @@ test('Permissions-Policy: header present', async ({ page }, testInfo) => {
 });
 
 test('Permissions-Policy: camera and microphone restricted', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -32,7 +45,12 @@ test('Permissions-Policy: camera and microphone restricted', async ({ page }, te
   const policy = headers['permissions-policy'] || headers['feature-policy'];
 
   if (!policy) {
-    test.skip(true, 'No Permissions-Policy header found');
+    reporter.reportWarning('No Permissions-Policy header found', [
+      'Add Permissions-Policy header to restrict camera and microphone access',
+      'Set format: camera=(), microphone=()',
+      'Review Permissions-Policy specification at MDN',
+      'Configure server to include Permissions-Policy in responses'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -54,10 +72,16 @@ test('Permissions-Policy: camera and microphone restricted', async ({ page }, te
 });
 
 test('Permissions-Policy: geolocation restricted', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -65,7 +89,12 @@ test('Permissions-Policy: geolocation restricted', async ({ page }, testInfo) =>
   const policy = headers['permissions-policy'] || headers['feature-policy'];
 
   if (!policy) {
-    test.skip(true, 'No Permissions-Policy header found');
+    reporter.reportWarning('No Permissions-Policy header found', [
+      'Add Permissions-Policy header to restrict geolocation access',
+      'Set format: geolocation=()',
+      'Review Permissions-Policy specification at MDN',
+      'Configure server to include Permissions-Policy in responses'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -82,10 +111,16 @@ test('Permissions-Policy: geolocation restricted', async ({ page }, testInfo) =>
 });
 
 test('Permissions-Policy: payment features restricted', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -93,7 +128,12 @@ test('Permissions-Policy: payment features restricted', async ({ page }, testInf
   const policy = headers['permissions-policy'] || headers['feature-policy'];
 
   if (!policy) {
-    test.skip(true, 'No Permissions-Policy header found');
+    reporter.reportWarning('No Permissions-Policy header found', [
+      'Add Permissions-Policy header to restrict payment features',
+      'Set format: payment-request=()',
+      'Review Permissions-Policy specification at MDN',
+      'Configure server to include Permissions-Policy in responses'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 

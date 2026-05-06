@@ -470,7 +470,7 @@ npx playwright show-report
 
 - 📖 See [SECURITY_REPORTING.md](./SECURITY_REPORTING.md) for detailed documentation
 - 📋 See [SAMPLE_REPORT_OUTPUT.md](./SAMPLE_REPORT_OUTPUT.md) for example reports
-- 🔧 Check [security-reporter.ts](./security-reporter.ts) for API reference
+- Check [security-reporter.ts](./security-reporter.ts) for API reference
 
 ---
 

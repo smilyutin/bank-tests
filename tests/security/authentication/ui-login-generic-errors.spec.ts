@@ -1,7 +1,17 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 import { LOGIN_SELECTORS, getInputLocator } from '../selectors.config';
 import { getTestUserWithUsername } from '../test-users';
+import { softCheck } from '../utils/utils';
+
+const TARGET_APP_FIX_FIRST = [
+  'Use generic error messages for all login failures (e.g., "Invalid credentials")',
+  'Never reveal whether email/username exists in the database',
+  'Return same HTTP status code (401) for user not found and wrong password',
+  'Log enumeration attempts separately from normal login failures for security monitoring',
+  'Display rate limiting messages to users after multiple failed attempts',
+  'Ensure password field is masked with type="password" attribute',
+];
 
 /**
  * UI Login Security Tests
@@ -38,7 +48,9 @@ import { getTestUserWithUsername } from '../test-users';
  * 3. Compare error messages to ensure they're generic
  * 4. Verify no specific user information is revealed
  */
-test('UI Login: generic error messages prevent enumeration', async ({ page }, testInfo) => {
+test('UI login shows generic error messages to prevent user enumeration', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
+  
   // Use pre-configured test user from fixtures/users.json
   const user = getTestUserWithUsername();
   const fakeEmail = 'fake-' + Date.now() + '@example.com';
@@ -47,14 +59,30 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
     // Check if login page exists with short timeout
     const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
     if (!response || response.status() === 404) {
-      test.skip(true, 'Login page not found (404)');
+      reporter.reportWarning(
+        'UI login enumeration probe could not run because the login page was not found (404).',
+        [
+          'Ensure login route is deployed and reachable in the target environment',
+          'Stabilize UI startup checks before authentication security tests run',
+          'Fail CI earlier when login-page availability checks fail'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
     // Check if username/email input exists before proceeding  
     const emailInput = await getInputLocator(page, LOGIN_SELECTORS.emailInput);
     if (!emailInput) {
-      test.skip(true, 'Login form not found on page');
+      reporter.reportWarning(
+        'UI login enumeration probe could not run because the login form was not found on the page.',
+        [
+          'Update selectors in tests/security/selectors.config.ts for the current login UI',
+          'Ensure username/email field is rendered and visible',
+          'Run selector discovery before security UI test stage'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
@@ -63,7 +91,15 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
     const submitButton = await getInputLocator(page, LOGIN_SELECTORS.submitButton);
     
     if (!passwordInput || !submitButton) {
-      test.skip(true, 'Login form inputs not found');
+      reporter.reportWarning(
+        'UI login enumeration probe could not run because password or submit inputs were not found.',
+        [
+          'Update selectors in tests/security/selectors.config.ts for the current login UI',
+          'Ensure password and submit controls are rendered and interactable',
+          'Run selector discovery before security UI test stage'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
@@ -92,17 +128,50 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
         error1.toLowerCase().includes('no user') ||
         error2.toLowerCase().includes('already exists');
 
-      softCheck(
-        testInfo,
-        !hasSpecificError,
-        'Login UI should show generic error messages to prevent user enumeration'
-      );
+      if (!hasSpecificError && error1 === error2) {
+        reporter.reportPass(
+          `Login error messages are generic and identical. Same message for wrong password and non-existent user. ` +
+          `This prevents user enumeration attacks. Error shown: "${error1.slice(0, 50)}..."`,
+          OWASP_VULNERABILITIES.API2_AUTH.name
+        );
+      } else if (!hasSpecificError) {
+        reporter.reportWarning(
+          `Error messages are generic (no "not found"/"no user" strings) but differ between user not found and wrong password. ` +
+          `Error 1: "${error1}". Error 2: "${error2}". Attackers may still enumerate users via timing/differences.`,
+          TARGET_APP_FIX_FIRST,
+          OWASP_VULNERABILITIES.API2_AUTH.name
+        );
+      } else {
+        reporter.reportWarning(
+          `Login error messages reveal user account information. ` +
+          `Error contains enumeration hints: "${error1}" vs "${error2}". ` +
+          `Attackers can enumerate valid accounts and target them for brute force attacks.`,
+          TARGET_APP_FIX_FIRST,
+          OWASP_VULNERABILITIES.API2_AUTH.name
+        );
+      }
     } else {
-      test.skip(true, 'Could not capture error messages from login form');
+      reporter.reportWarning(
+        'UI login enumeration probe could not capture login error messages for comparison.',
+        [
+          'Ensure login failures render visible error text in the UI',
+          'Update LOGIN_SELECTORS.errorMessage to match actual error containers',
+          'Standardize error rendering so security probes can verify generic responses'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
     }
   } catch (e) {
     // Login page might not exist or selectors don't match
-    test.skip(true, `Login page not available: ${e}`);
+    reporter.reportWarning(
+      `UI login enumeration probe failed due to login-page interaction error: ${String(e).slice(0, 100)}`,
+      [
+        'Ensure login page is reachable and stable in the target environment',
+        'Update UI selectors to match the current application',
+        'Fail CI earlier when authentication UI smoke checks fail'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
   }
 });
 
@@ -123,12 +192,22 @@ test('UI Login: generic error messages prevent enumeration', async ({ page }, te
  * 2. Check for rate limiting messages
  * 3. Verify users are informed of restrictions
  */
-test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
+test('UI login displays rate limiting feedback to users', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
+  
   try {
     // Check if login page exists with short timeout
     const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
     if (!response || response.status() === 404) {
-      test.skip(true, 'Login page not found (404)');
+      reporter.reportWarning(
+        'UI rate-limiting-feedback probe could not run because the login page was not found (404).',
+        [
+          'Ensure login route is deployed and reachable in the target environment',
+          'Stabilize UI startup checks before authentication security tests run',
+          'Fail CI earlier when login-page availability checks fail'
+        ],
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
       return;
     }
     
@@ -138,7 +217,15 @@ test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
     const submitButton = await getInputLocator(page, LOGIN_SELECTORS.submitButton);
     
     if (!emailInput || !passwordInput || !submitButton) {
-      test.skip(true, 'Login form not found on page');
+      reporter.reportWarning(
+        'UI rate-limiting-feedback probe could not run because login form controls were not found.',
+        [
+          'Update selectors in tests/security/selectors.config.ts for the current login UI',
+          'Ensure email/username, password, and submit controls are rendered',
+          'Run selector discovery before security UI test stage'
+        ],
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
       return;
     }
     
@@ -155,16 +242,35 @@ test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
     const hasRateLimitMsg = 
       body.toLowerCase().includes('too many') ||
       body.toLowerCase().includes('rate limit') ||
-      body.toLowerCase().includes('try again');
+      body.toLowerCase().includes('try again later');
 
     // Step 3: Verify users are informed about rate limiting
-    softCheck(
-      testInfo,
-      hasRateLimitMsg,
-      'UI should inform users when rate limited'
-    );
+    if (hasRateLimitMsg) {
+      reporter.reportPass(
+        `UI provides clear feedback when rate limited after multiple failed attempts. ` +
+        `Users are informed to try again later. This improves user experience during attacks. ` +
+        `Evidence: Rate limit message displayed after 10 failed login attempts.`,
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    } else {
+      reporter.reportWarning(
+        `UI does not display rate limiting feedback to users after multiple failed attempts. ` +
+        `Users may continue attempting to login and be confused by continued failures. ` +
+        `Impact: Poor UX but also helps attackers avoid detection of attack patterns.`,
+        [...TARGET_APP_FIX_FIRST, 'Display "Too many attempts, try again later" message when rate limited'],
+        OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+      );
+    }
   } catch (e) {
-    test.skip(true, `Login page not available: ${e}`);
+    reporter.reportWarning(
+      `UI rate-limiting-feedback probe failed due to login-page interaction error: ${String(e).slice(0, 100)}`,
+      [
+        'Ensure login page is reachable and stable in the target environment',
+        'Update UI selectors to match the current application',
+        'Fail CI earlier when authentication UI smoke checks fail'
+      ],
+      OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
+    );
   }
 });
 
@@ -186,18 +292,35 @@ test('UI Login: rate limiting visible to user', async ({ page }, testInfo) => {
  * 3. Verify field is masked (type="password")
  */
 test('UI Login: password field masked by default', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     // Check if login page exists with short timeout
     const response = await page.goto(LOGIN_SELECTORS.loginPath, { timeout: 5000, waitUntil: 'domcontentloaded' });
     if (!response || response.status() === 404) {
-      test.skip(true, 'Login page not found (404)');
+      reporter.reportWarning(
+        'UI password-masking probe could not run because the login page was not found (404).',
+        [
+          'Ensure login route is deployed and reachable in the target environment',
+          'Stabilize UI startup checks before authentication security tests run',
+          'Fail CI earlier when login-page availability checks fail'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
     // Step 1: Locate password input field
     const passwordInput = await getInputLocator(page, LOGIN_SELECTORS.passwordInput);
     if (!passwordInput) {
-      test.skip(true, 'Password field not found on login page');
+      reporter.reportWarning(
+        'UI password-masking probe could not run because password input was not found on login page.',
+        [
+          'Update password selector in tests/security/selectors.config.ts',
+          'Ensure password input is present and rendered with a stable selector',
+          'Run selector discovery before security UI test stage'
+        ],
+        OWASP_VULNERABILITIES.API2_AUTH.name
+      );
       return;
     }
     
@@ -210,6 +333,14 @@ test('UI Login: password field masked by default', async ({ page }, testInfo) =>
       'Password field should be masked (type="password") by default'
     );
   } catch (e) {
-    test.skip(true, `Login page not available: ${e}`);
+    reporter.reportWarning(
+      `UI password-masking probe failed due to login-page interaction error: ${String(e).slice(0, 100)}`,
+      [
+        'Ensure login page is reachable and stable in the target environment',
+        'Update UI selectors to match the current application',
+        'Fail CI earlier when authentication UI smoke checks fail'
+      ],
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
   }
 });

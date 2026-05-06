@@ -1,9 +1,8 @@
+/// <reference types="node" />
 import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/loginPage';
 import { DashboardPage } from './pages/dashboardPage';
 import { findOrCreateUser } from '../utils/credentials';
-import fs from 'fs';
-import path from 'path';
 
 /**
  * Visual Regression Tests
@@ -23,9 +22,6 @@ import path from 'path';
  * - Visual elements should match baseline
  * - Screenshots should be consistent across runs
  */
-
-const baselineDir = path.join(process.cwd(), 'tests', 'visual-baselines');
-const baselineFile = path.join(baselineDir, 'left-menu.png');
 
 /**
  * Test: Left menu visual regression
@@ -62,21 +58,6 @@ test('left menu visual regression', async ({ page, baseURL }) => {
   const clip = await nav.first().boundingBox();
   if (!clip) throw new Error('Could not determine nav bounding box');
 
-  // Step 4: Ensure baseline directory exists
-  if (!fs.existsSync(baselineDir)) fs.mkdirSync(baselineDir, { recursive: true });
-
-  // Step 5: Capture screenshot of navigation menu
-  const screenshotBuffer = await page.screenshot({ clip });
-  if (!fs.existsSync(baselineFile)) {
-    // Step 6: Save baseline if missing
-    fs.writeFileSync(baselineFile, screenshotBuffer);
-    test.info().attach('baseline-saved', { body: screenshotBuffer, contentType: 'image/png' });
-    console.log('Saved baseline left-menu.png');
-    return;
-  }
-
-  // Step 7: Compare against baseline image
-  const baseline = fs.readFileSync(baselineFile);
-  // Basic byte-compare (strict). For better diffs use pixelmatch.
-  expect(screenshotBuffer.equals(baseline)).toBeTruthy();
+  // Step 4: Compare against baseline (created automatically on first run)
+  await expect(page).toHaveScreenshot('left-menu.png', { clip, maxDiffPixelRatio: 0.02 });
 });

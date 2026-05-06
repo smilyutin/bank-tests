@@ -1,4 +1,4 @@
-# 🔧 Broken Tests Fix Summary
+# Broken Tests Fix Summary
 
 ## Issue Identified
 
@@ -141,7 +141,7 @@ test.skip(true, 'reason');
 
 ---
 
-## 📊 Expected Results
+## Expected Results
 
 ### Before Fix
 ```
@@ -178,7 +178,7 @@ These tests are **UI-based** and require a login page at `/login`. If your appli
 
 ---
 
-## 🔧 How to Make Tests Pass
+## How to Make Tests Pass
 
 If you want these tests to **pass** instead of skip:
 

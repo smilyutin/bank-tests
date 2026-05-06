@@ -1,4 +1,4 @@
-# 🔧 Fix Applied: Docker Compose V2 Syntax
+# Fix Applied: Docker Compose V2 Syntax
 
 ## Issue
 
@@ -213,4 +213,4 @@ Run `docker-compose up -d`
 ✅ **Compatible:** Works with Docker Compose V2  
 ✅ **Documented:** Troubleshooting guide updated  
 
-**Next Step:** Commit and push to test the fix! 🚀
+**Next Step:** Commit and push to test the fix!

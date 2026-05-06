@@ -1,5 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { test } from '@playwright/test';
+import { ensureTestUser, tryLogin } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+
+const TARGET_APP_FIX_FIRST = [
+  'Regenerate session ID/cookie after successful authentication',
+  'Invalidate pre-login session ID to prevent fixation attacks',
+  'Ensure new session cookie is issued with HttpOnly and Secure flags',
+  'Implement session binding: verify user identity matches session after login',
+  'Use strong, unpredictable session ID generation (at least 128 bits entropy)',
+  'Clear any pre-authentication session context after successful login',
+];
 
 /**
  * Session Fixation Vulnerability Tests
@@ -19,28 +29,17 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * - New session IDs should be generated
  */
 
-/**
- * Test: Session ID rotation on login
- * 
- * Purpose: Verifies that session cookies are rotated when users authenticate,
- * preventing session fixation attacks where attackers can hijack user sessions.
- * 
- * Security Impact: Session fixation can lead to:
- * - Session hijacking by attackers
- * - Unauthorized access to user accounts
- * - Account takeover attacks
- * - Privilege escalation through session reuse
- * 
- * Test Strategy:
- * 1. Capture session cookie before login (anonymous)
- * 2. Perform user authentication
- * 3. Capture session cookie after login
- * 4. Verify cookies are different (rotation occurred)
- */
-test('Session fixation: session id should rotate on login', async ({ request }, testInfo) => {
+test('Session ID rotates on login to prevent fixation attacks', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
+  
   const user = await ensureTestUser(request as any);
   if (!user.email || !user.password) {
-    test.skip(true, 'No persisted user');
+    reporter.reportWarning('No test user configured for session fixation test', [
+      'Ensure test credentials exist in tests/fixtures/users.json',
+      'Run user initialization scripts',
+      'Verify app registration endpoint is available',
+      'Check FIXTURE_USERS_INTEGRATION.md for setup process'
+    ], OWASP_VULNERABILITIES.API2_AUTH.name);
     return;
   }
   
@@ -51,7 +50,12 @@ test('Session fixation: session id should rotate on login', async ({ request }, 
   // Step 2: Perform user authentication
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt) {
-    test.skip(true, 'Login endpoint not found');
+    reporter.reportWarning('Login endpoint not found or unreachable', [
+      'Verify /login or /api/auth endpoints exist and are accessible',
+      'Check that app is running and accepting HTTP requests',
+      'Review server logs for auth endpoint errors',
+      'Ensure test user credentials are valid for the app'
+    ], OWASP_VULNERABILITIES.API2_AUTH.name);
     return;
   }
   
@@ -60,10 +64,28 @@ test('Session fixation: session id should rotate on login', async ({ request }, 
   const authCookie = res.headers()['set-cookie'] || '';
 
   // Step 4: Verify session cookie changed after login
-  // This indicates proper session rotation and prevents session fixation
-  softCheck(
-    testInfo, 
-    !!authCookie && authCookie !== anonCookie, 
-    'Session cookie did not change after login (possible session fixation)'
-  );
+  if (authCookie && authCookie !== anonCookie) {
+    reporter.reportPass(
+      `Session ID properly rotated on successful authentication. ` +
+      `Anonymous session cookie was replaced with authenticated session cookie. ` +
+      `This prevents session fixation attacks where attackers pre-set session IDs. ` +
+      `Evidence: Pre-auth cookie differs from post-auth cookie.`,
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
+  } else if (!authCookie) {
+    reporter.reportWarning(
+      `No session cookie set after login. App may be using token-based authentication without proper session invalidation. ` +
+      `Verify that old tokens cannot be reused after logout.`,
+      TARGET_APP_FIX_FIRST,
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
+  } else {
+    reporter.reportWarning(
+      `Session cookie was not rotated after login. Same session ID used before and after authentication. ` +
+      `This allows attackers to conduct session fixation attacks by forcing users to use attacker-controlled session IDs. ` +
+      `Impact: complete session hijacking and account takeover.`,
+      TARGET_APP_FIX_FIRST,
+      OWASP_VULNERABILITIES.API2_AUTH.name
+    );
+  }
 });

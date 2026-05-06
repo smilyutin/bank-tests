@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { ensureTestUser, tryLogin, softCheck } from '../utils';
+import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * Role-Based Access Control (RBAC) and Authorization Tests
@@ -42,17 +43,34 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils';
  * 4. Ensure proper role-based restrictions
  */
 test('Role scoping: regular user cannot access admin endpoints', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Admin-endpoint role-scoping probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable non-admin user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 
   // Step 1: Authenticate as regular user
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Admin-endpoint role-scoping probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so authorization probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 
@@ -98,16 +116,33 @@ test('Role scoping: regular user cannot access admin endpoints', async ({ reques
 });
 
 test('Role scoping: role elevation attempts blocked', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Role-elevation probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable non-admin user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Role-elevation probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so role-elevation probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 
@@ -133,16 +168,33 @@ test('Role scoping: role elevation attempts blocked', async ({ request }, testIn
 });
 
 test('Role scoping: JWT does not expose sensitive role claims', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'JWT role-claim exposure probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable test user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not obtain token');
+    reporter.reportWarning(
+      'JWT role-claim exposure probe could not run because login failed or no token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent session/cookie claim exposure checks',
+        'Document auth transport mechanism so JWT-specific probes only target JWT-based flows',
+      ],
+      OWASP_VULNERABILITIES.API3_DATA_EXPOSURE.name
+    );
     return;
   }
 
@@ -171,16 +223,33 @@ test('Role scoping: JWT does not expose sensitive role claims', async ({ request
 });
 
 test('Role scoping: operations limited by scope', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   if (!user.email || !user.password) {
-    test.skip(true, 'No user configured');
+    reporter.reportWarning(
+      'Scoped-operations probe could not run because no valid test user credentials are configured.',
+      [
+        'Seed a login-capable non-admin user in tests/fixtures/users.json',
+        'Automate test-user provisioning before authorization security tests run',
+        'Fail CI earlier if required auth fixtures are missing',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt || !attempt.token) {
-    test.skip(true, 'Could not login');
+    reporter.reportWarning(
+      'Scoped-operations probe could not run because login failed or no bearer token was obtained.',
+      [
+        'Ensure login endpoint is reachable and returns an auth token for test users',
+        'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
+        'Document auth transport mechanism so destructive-operation probes use the correct credential type',
+      ],
+      OWASP_VULNERABILITIES.API5_BFLA.name
+    );
     return;
   }
 

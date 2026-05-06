@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
-import { softCheck } from '../utils';
+import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
 /**
  * Clickjacking Protection Tests
@@ -39,10 +40,16 @@ import { softCheck } from '../utils';
  * 3. Ensure proper clickjacking protection
  */
 test('Clickjacking: X-Frame-Options header present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 
@@ -88,10 +95,16 @@ test('Clickjacking: X-Frame-Options header present', async ({ page }, testInfo) 
  * 3. Ensure directive has restrictive values
  */
 test('Clickjacking: CSP frame-ancestors directive present', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    test.skip(true, 'No response received');
+    reporter.reportWarning('No response received from base URL', [
+      'Verify BASE_URL environment variable is set correctly',
+      'Ensure application server is running and accessible',
+      'Check network connectivity and firewall rules',
+      'Review server logs for startup or configuration errors'
+    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
     return;
   }
 

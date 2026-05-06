@@ -140,7 +140,7 @@ API3:2023 - Broken Object Property Level Authorization
 4. Validate and sanitize all API responses
 5. Document what data should be exposed for each endpoint
 
-## 🔧 Remediation Steps
+## Remediation Steps
 1. Audit all API responses for sensitive data exposure
 2. Create serializers/DTOs that explicitly define allowed fields
 3. Remove password hashes, tokens, and internal IDs from responses
@@ -201,7 +201,7 @@ No rate limiting detected during burst test (30 requests). This may indicate lac
 
 ---
 
-## 🔧 How It Works
+## How It Works
 
 ### Architecture
 
@@ -314,7 +314,7 @@ All OWASP API Security Top 10 2023 categories are defined with:
 
 ---
 
-## 🚀 How to Use Right Now
+## How to Use Right Now
 
 ### 1. Run Updated Tests
 
@@ -527,7 +527,7 @@ Use this to verify the implementation works:
 3. Call report methods based on test outcomes
 4. View reports in Playwright HTML reporter
 
-**The system is working and ready to use!** 🚀
+**The system is working and ready to use!**
 
 ---
 

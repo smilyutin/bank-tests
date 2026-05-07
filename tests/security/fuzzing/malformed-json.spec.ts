@@ -226,7 +226,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
   const totalIssues = serverCrashes + informationLeaks + improperHandling;
   
   if (totalIssues > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       serverCrashes,
       informationLeaks,
       improperHandling,
@@ -245,7 +245,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
   } else {
     reporter.reportPass(
       'API handles malformed JSON gracefully without crashes or information disclosure',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -312,7 +312,7 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
   }
   
   if (crashed) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       issue: 'Server crashed with deeply nested JSON - DoS vulnerability',
       depth: 'various'
     }, [
@@ -330,12 +330,12 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
         'Add request timeouts to prevent resource exhaustion',
         'Consider early rejection of complex structures'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API handles deeply nested JSON safely without crashes',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

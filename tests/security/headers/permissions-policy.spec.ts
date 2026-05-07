@@ -2,8 +2,16 @@ import { test } from '@playwright/test';
 import { softCheck } from '../utils/utils';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
+/**
+ * Permissions-Policy validation checks.
+ *
+ * These tests verify that risky browser capabilities are intentionally scoped.
+ * Missing headers are reported with remediation guidance to preserve CI signal.
+ */
+
 test('Permissions-Policy: header present', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
+  // Single document request is enough to validate policy header presence.
   const response = await page.goto('/');
   
   if (!response) {
@@ -12,7 +20,7 @@ test('Permissions-Policy: header present', async ({ page }, testInfo) => {
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -37,7 +45,7 @@ test('Permissions-Policy: camera and microphone restricted', async ({ page }, te
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -50,10 +58,11 @@ test('Permissions-Policy: camera and microphone restricted', async ({ page }, te
       'Set format: camera=(), microphone=()',
       'Review Permissions-Policy specification at MDN',
       'Configure server to include Permissions-Policy in responses'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
+  // Accept both modern and legacy value shapes used across frameworks/proxies.
   const cameraRestricted = 
     policy.includes('camera=()') || 
     policy.includes("camera 'none'") ||
@@ -81,7 +90,7 @@ test('Permissions-Policy: geolocation restricted', async ({ page }, testInfo) =>
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -94,7 +103,7 @@ test('Permissions-Policy: geolocation restricted', async ({ page }, testInfo) =>
       'Set format: geolocation=()',
       'Review Permissions-Policy specification at MDN',
       'Configure server to include Permissions-Policy in responses'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -120,7 +129,7 @@ test('Permissions-Policy: payment features restricted', async ({ page }, testInf
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -133,7 +142,7 @@ test('Permissions-Policy: payment features restricted', async ({ page }, testInf
       'Set format: payment-request=()',
       'Review Permissions-Policy specification at MDN',
       'Configure server to include Permissions-Policy in responses'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 

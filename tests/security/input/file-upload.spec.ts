@@ -55,7 +55,7 @@ test('File upload: malicious file extensions blocked', async ({ request }, testI
         'Automate test-user provisioning before file-upload security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -70,7 +70,7 @@ test('File upload: malicious file extensions blocked', async ({ request }, testI
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so upload probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -239,7 +239,7 @@ test('File upload: MIME type validation', async ({ request }, testInfo) => {
         'Automate test-user provisioning before file-upload security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -253,7 +253,7 @@ test('File upload: MIME type validation', async ({ request }, testInfo) => {
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so upload probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -308,7 +308,7 @@ test('File upload: path traversal protection', async ({ request }, testInfo) => 
         'Automate test-user provisioning before file-upload security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -322,7 +322,7 @@ test('File upload: path traversal protection', async ({ request }, testInfo) => 
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so upload probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -380,7 +380,7 @@ test('File upload: uploaded files not executable', async ({ request }, testInfo)
         'Automate test-user provisioning before file-upload security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -394,7 +394,7 @@ test('File upload: uploaded files not executable', async ({ request }, testInfo)
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so upload probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }

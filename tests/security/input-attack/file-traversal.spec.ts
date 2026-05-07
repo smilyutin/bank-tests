@@ -127,7 +127,7 @@ test('File Traversal: basic directory traversal blocked', async ({ baseURL }, te
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -204,13 +204,13 @@ test('File Traversal: basic directory traversal blocked', async ({ baseURL }, te
         'Ensure CI target includes representative file APIs for traversal testing',
         'Add route metadata so security tests can discover valid file endpoints'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (vulnerabilities.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilitiesFound: vulnerabilities.length,
       examples: vulnerabilities.slice(0, 3),
       blocked,
@@ -229,7 +229,7 @@ test('File Traversal: basic directory traversal blocked', async ({ baseURL }, te
   } else {
     reporter.reportPass(
       `Directory traversal attempts properly blocked (${blocked} attacks rejected)`,
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -251,7 +251,7 @@ test('File Traversal: encoded traversal attempts blocked', async ({ baseURL }, t
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -299,13 +299,13 @@ test('File Traversal: encoded traversal attempts blocked', async ({ baseURL }, t
         'Ensure CI target includes representative file APIs for traversal testing',
         'Add route metadata so security tests can discover valid file endpoints'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (bypassSucceeded > 0 || crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       bypassSucceeded,
       crashes,
       issue: 'Encoded traversal attacks bypassed filters or crashed server'
@@ -320,7 +320,7 @@ test('File Traversal: encoded traversal attempts blocked', async ({ baseURL }, t
   } else {
     reporter.reportPass(
       'Encoded directory traversal attempts properly blocked',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -342,7 +342,7 @@ test('File Traversal: absolute paths rejected', async ({ baseURL }, testInfo) =>
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -384,13 +384,13 @@ test('File Traversal: absolute paths rejected', async ({ baseURL }, testInfo) =>
         'Ensure CI target includes representative file APIs for traversal testing',
         'Add route metadata so security tests can discover valid file endpoints'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (allowedAbsolute > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       allowedAbsolute,
       issue: 'Absolute file paths allowed - direct system file access possible'
     }, [
@@ -404,7 +404,7 @@ test('File Traversal: absolute paths rejected', async ({ baseURL }, testInfo) =>
   } else {
     reporter.reportPass(
       'Absolute file paths properly rejected',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -426,7 +426,7 @@ test('File Traversal: null byte injection prevented', async ({ baseURL }, testIn
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -473,13 +473,13 @@ test('File Traversal: null byte injection prevented', async ({ baseURL }, testIn
         'Ensure CI target includes representative file APIs for traversal testing',
         'Add route metadata so security tests can discover valid file endpoints'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (nullByteWorked > 0 || crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       nullByteWorked,
       crashes,
       issue: 'Null byte injection successful or caused crashes'
@@ -493,7 +493,7 @@ test('File Traversal: null byte injection prevented', async ({ baseURL }, testIn
   } else {
     reporter.reportPass(
       'Null byte injection properly prevented',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -515,7 +515,7 @@ test('File Traversal: sensitive files protected', async ({ baseURL }, testInfo) 
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -568,13 +568,13 @@ test('File Traversal: sensitive files protected', async ({ baseURL }, testInfo) 
         'Ensure CI target includes representative file APIs for traversal testing',
         'Add route metadata so security tests can discover valid file endpoints'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (exposedFiles > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       exposedFiles,
       issue: `${exposedFiles} sensitive application files accessible`
     }, [
@@ -588,7 +588,7 @@ test('File Traversal: sensitive files protected', async ({ baseURL }, testInfo) 
   } else {
     reporter.reportPass(
       'Sensitive application files properly protected',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

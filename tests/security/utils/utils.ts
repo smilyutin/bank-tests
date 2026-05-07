@@ -57,7 +57,7 @@ function inferSoftCheckCategory(message: string): string {
   }
 
   if (m.includes('xss') || m.includes('inline') || m.includes('script') || m.includes('inject') || m.includes('injection')) {
-    return OWASP_VULNERABILITIES.API8_INJECTION.name;
+    return OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name;
   }
 
   if (m.includes('csrf') || m.includes('token') || m.includes('session') || m.includes('auth') || m.includes('login') || m.includes('password')) {

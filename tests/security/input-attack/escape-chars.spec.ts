@@ -137,7 +137,7 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -208,13 +208,13 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
         'Ensure CI target includes representative endpoints for SQL escaping checks',
         'Add route metadata so security tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (vulnerabilities.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       sqlInjectionRisks: vulnerabilities.length,
       examples: vulnerabilities.slice(0, 3),
       issue: 'SQL special characters not properly handled'
@@ -230,7 +230,7 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
   } else {
     reporter.reportPass(
       `SQL injection characters handled safely (${safelyHandled} payloads validated)`,
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -252,7 +252,7 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -309,13 +309,13 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
         'Ensure CI target includes representative endpoints for XSS escaping checks',
         'Add route metadata so security tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       issue: 'Server crashed with XSS payloads'
     }, [
@@ -328,7 +328,7 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
   } else {
     reporter.reportPass(
       `XSS characters handled without crashes (${acceptedXSS} payloads accepted for storage)`,
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -350,7 +350,7 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -397,13 +397,13 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
         'Ensure CI target includes representative endpoints for command-injection checks',
         'Add route metadata so security tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (issues > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       issues,
       issue: 'Server crashed with command injection metacharacters'
     }, [
@@ -417,7 +417,7 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
   } else {
     reporter.reportPass(
       'Command injection metacharacters handled safely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -439,7 +439,7 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -487,13 +487,13 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
         'Ensure CI target includes representative endpoints for path-traversal checks',
         'Add route metadata so security tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (crashes > 0 || acceptedTraversal > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       acceptedTraversal,
       issue: 'Path traversal sequences not properly blocked'
@@ -509,7 +509,7 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
   } else {
     reporter.reportPass(
       'Path traversal sequences properly blocked',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -531,7 +531,7 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -579,13 +579,13 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
         'Ensure CI target includes representative endpoints for NoSQL injection checks',
         'Add route metadata so security tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (vulnerabilities > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilities,
       issue: 'NoSQL injection operators caused server errors'
     }, [
@@ -599,7 +599,7 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
   } else {
     reporter.reportPass(
       'NoSQL injection operators handled safely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

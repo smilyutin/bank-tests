@@ -90,6 +90,20 @@
       "username": "e2ecmccb7gz",
       "email": "e2e+cmccb7gz@example.com",
       "password": "Password123!"
+    },
+    {
+      "email": "test+smnvxq@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2eqwyli06h",
+      "email": "e2e+qwyli06h@example.com",
+      "password": "Password123!"
+    },
+    {
+      "username": "e2edkr50795",
+      "email": "e2e+dkr50795@example.com",
+      "password": "Password123!"
     }
   ]
 }

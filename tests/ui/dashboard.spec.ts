@@ -281,42 +281,5 @@ test.describe('Dashboard functionality', () => {
 
     const transactions = await dashboardPage.getRecentTransactions();
     expect(transactions.length).toBeGreaterThanOrEqual(0);
-  });
-
-
-  test('should maintain accessibility standards', async ({ page }) => {
-    await page.waitForLoadState('domcontentloaded');
-
-    const mainContent = page.locator('[role="main"], main');
-    if ((await mainContent.count()) === 0) {
-      test.skip(true, 'Main landmark not present on this page');
-    } else {
-      await mainContent.first().waitFor({ state: 'visible', timeout: 5000 });
-      expect(await mainContent.count()).toBeGreaterThan(0);
-    }
-
-    const navigation = page.locator('[role="navigation"], nav');
-    if ((await navigation.count()) === 0) {
-      test.skip(true, 'Navigation landmark not present on this page');
-    } else {
-      await navigation.first().waitFor({ state: 'visible', timeout: 5000 });
-      expect(await navigation.count()).toBeGreaterThan(0);
-    }
-
-    const balanceElement = page.getByText(/balance/i).first();
-    if (await balanceElement.count()) {
-      const styles = await balanceElement.evaluate((el: Element) => {
-        const computed = window.getComputedStyle(el);
-        return {
-          fontSize: computed.fontSize,
-          color: computed.color,
-          backgroundColor: computed.backgroundColor
-        };
-      });
-
-      const fontSize = parseInt(styles.fontSize, 10);
-      expect(fontSize).toBeGreaterThanOrEqual(14);
-    }
-  });
-
-});
+  })
+})

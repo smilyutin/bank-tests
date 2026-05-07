@@ -285,7 +285,7 @@ test('Unicode: normalization prevents validation bypass', async ({ baseURL }, te
   }
   
   if (issues.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       issues: issues.length,
       examples: issues,
       attack: 'Unicode normalization vulnerabilities detected'
@@ -300,7 +300,7 @@ test('Unicode: normalization prevents validation bypass', async ({ baseURL }, te
   } else {
     reporter.reportPass(
       'API handles Unicode normalization correctly',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -370,7 +370,7 @@ test('Unicode: homograph attacks detected', async ({ baseURL }, testInfo) => {
   }
   
   if (crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       issue: 'Server crashed with homograph characters'
     });
@@ -385,12 +385,12 @@ test('Unicode: homograph attacks detected', async ({ baseURL }, testInfo) => {
         'Implement punycode for internationalized domain names',
         'Warn users about lookalike characters'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API rejects homograph attacks appropriately',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -461,12 +461,12 @@ test('Unicode: zero-width characters handled', async ({ baseURL }, testInfo) => 
         'Normalize strings to remove non-printable characters',
         'Use character whitelist for email/username fields'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API handles zero-width characters appropriately',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -534,7 +534,7 @@ test('Unicode: bidirectional text controlled', async ({ baseURL }, testInfo) => 
   }
   
   if (crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       issue: 'Server crashed with bidirectional text characters'
     });
@@ -548,12 +548,12 @@ test('Unicode: bidirectional text controlled', async ({ baseURL }, testInfo) => 
         'Sanitize display strings separately from stored values',
         'Consider blocking directional formatting characters'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API handles bidirectional text safely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

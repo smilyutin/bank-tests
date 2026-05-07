@@ -352,7 +352,7 @@ test('Regression: SQL injection protection active', async ({ baseURL }, testInfo
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete regression coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -407,13 +407,13 @@ test('Regression: SQL injection protection active', async ({ baseURL }, testInfo
         'Ensure CI target includes representative endpoints that consume user input',
         'Add OpenAPI or route metadata so regression tests can discover valid injection targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
   
   if (sqlErrorExposed || serverCrashed) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       sqlErrorExposed,
       serverCrashed,
       issue: 'SQL injection regression - vulnerabilities detected'
@@ -428,7 +428,7 @@ test('Regression: SQL injection protection active', async ({ baseURL }, testInfo
   } else {
     reporter.reportPass(
       'SQL injection protection working correctly',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

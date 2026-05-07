@@ -407,7 +407,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
         'Seed a valid user for authenticated XSS rendering checks',
         'Ensure test bootstrap provisions login-capable users before running security suites',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -422,7 +422,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
         'Fix login UI flow/selectors so authenticated XSS probes can execute reliably',
         'Add API-level fallback probe for profile rendering when UI path is unstable',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -456,7 +456,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
         'Use strict Content-Security-Policy and avoid inline scripts',
         'Sanitize rich-text/user-generated content using a vetted sanitizer',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 
@@ -477,7 +477,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
       if (!scriptExecuted) {
         reporter.reportPass(
           'System is protected: reflected/stored XSS payload was not rendered as executable script in profile content.',
-          OWASP_VULNERABILITIES.API8_INJECTION.name
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
         );
         return;
       }
@@ -490,7 +490,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
           'Use context-aware escaping in templates and frontend rendering',
           'Add automated XSS regression tests for profile and dashboard views',
         ],
-        OWASP_VULNERABILITIES.API8_INJECTION.name
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
       );
       return;
     }
@@ -501,7 +501,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
   if (!xssFound) {
     reporter.reportPass(
       'System is protected: no obvious dangerous script patterns detected in dashboard content during this probe.',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -513,7 +513,7 @@ test('XSS prevention: user data sanitization in dashboard', async ({ page }, tes
       'Expose/stabilize profile update endpoint in test environment for stored-XSS verification',
       'Add dedicated API schema/contract for profile updates so security probes can run deterministically',
     ],
-    OWASP_VULNERABILITIES.API8_INJECTION.name
+    OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
   );
   return;
 });

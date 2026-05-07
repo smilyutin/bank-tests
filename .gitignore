@@ -4,5 +4,7 @@ test-results/
 playwright-report/
 allure-results/
 allure-report/
+allure-results-history/
 .allure/
 .env
+.DS_Store

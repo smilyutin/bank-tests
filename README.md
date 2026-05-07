@@ -78,6 +78,8 @@ Beautiful interactive reports with:
 ```bash
 # Generate and view Allure report
 npm run allure:serve
+  or 
+npm run report:allure
 
 # Generate static report
 npm run allure:generate

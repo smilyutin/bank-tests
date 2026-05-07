@@ -52,7 +52,7 @@ test('CSRF: requests without token are rejected', async ({ request }, testInfo) 
         'Automate test-user provisioning before CSRF security tests run',
         'Fail CI earlier if required auth fixtures are missing',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -67,7 +67,7 @@ test('CSRF: requests without token are rejected', async ({ request }, testInfo) 
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so CSRF probes use the correct credential type',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -144,7 +144,7 @@ test('CSRF: invalid token is rejected', async ({ request }, testInfo) => {
         'Automate test-user provisioning before CSRF security tests run',
         'Fail CI earlier if required auth fixtures are missing',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -159,7 +159,7 @@ test('CSRF: invalid token is rejected', async ({ request }, testInfo) => {
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so CSRF probes use the correct credential type',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -239,7 +239,7 @@ test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
         'Automate test-user provisioning before CSRF security tests run',
         'Fail CI earlier if required auth fixtures are missing',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -254,7 +254,7 @@ test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
         'Verify authentication flow in the target environment before CSRF checks',
         'Fail CI earlier if authentication smoke checks fail',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -285,7 +285,7 @@ test('CSRF: SameSite cookie attribute set', async ({ request }, testInfo) => {
         'If using bearer-only auth, add equivalent CSRF/session protection checks and document non-applicability',
         'Set SameSite=Lax or SameSite=Strict for session cookies where applicable',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -342,7 +342,7 @@ test('CSRF: double submit cookie pattern or synchronizer token', async ({ page }
         'Stabilize application startup and health checks before UI security tests run',
         'Fail CI earlier when homepage availability checks fail',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -397,7 +397,7 @@ test('CSRF: token not leaked in URL', async ({ page }, testInfo) => {
         'Stabilize application startup and health checks before UI security tests run',
         'Fail CI earlier when homepage availability checks fail',
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

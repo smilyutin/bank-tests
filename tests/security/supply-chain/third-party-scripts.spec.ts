@@ -179,14 +179,14 @@ test('Third-party scripts: no inline event handlers', async ({ page }, testInfo)
         'Enforce CSP without unsafe-inline and use nonces/hashes for any required inline code.',
         'Add CI checks to block new on* attributes in templates and rendered views.'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
 
   reporter.reportPass(
     'No inline DOM event handlers detected on the evaluated page.',
-    OWASP_VULNERABILITIES.API8_INJECTION.name
+    OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
   );
 });
 

@@ -179,7 +179,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
   
   // Report findings
   if (vulnerabilities.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilitiesFound: vulnerabilities.length,
       examples: vulnerabilities.slice(0, 3),
       issue: `Fuzz testing revealed ${vulnerabilities.length} issues with random input handling`
@@ -194,7 +194,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
   } else {
     reporter.reportPass(
       `API handled ${successfulTests} random fuzz inputs gracefully without crashes or information disclosure`,
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -283,7 +283,7 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
   }
   
   if (vulnerabilities.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilitiesFound: vulnerabilities.length,
       examples: vulnerabilities.slice(0, 3),
       timingIssues: timingIssues.length
@@ -302,12 +302,12 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
         'Add input size limits before processing',
         'Consider early rejection of invalid input types'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'Authentication endpoint handled random fuzz inputs securely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -369,7 +369,7 @@ test('Fuzzing: search/filter endpoints handle random inputs', async ({ baseURL }
   }
   
   if (issues > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       serverErrors: issues,
       issue: 'Search/filter endpoints crashed with random inputs'
     });
@@ -377,7 +377,7 @@ test('Fuzzing: search/filter endpoints handle random inputs', async ({ baseURL }
   } else {
     reporter.reportPass(
       'Search/filter endpoints handled random fuzz inputs gracefully',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

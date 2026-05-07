@@ -77,15 +77,14 @@ test.describe('UI - Create user account', () => {
 
     // Step 5: Wait for success indication (navigation or success message)
     await Promise.race([
-      page.waitForNavigation({ timeout: 5000 }).catch(() => null),
-      page.waitForSelector('text=Welcome', { timeout: 5000 }).catch(() => null),
-      page.waitForSelector('text=Account created', { timeout: 5000 }).catch(() => null),
+     // page.waitForNavigation({ timeout: 5000 }).catch(() => null),
+      page.waitForSelector('text=Registration successful! Proceed to login', { timeout: 5000 }).catch(() => null),
     ]);
 
     // Step 6: Verify registration was successful
     const urlAfter = page.url();
-    const sawSuccess = await page.$('text=Welcome') || await page.$('text=Account created') || await page.$('text=Check your email');
-    expect(!!sawSuccess || !urlAfter.endsWith('/register')).toBeTruthy();
+    const sawSuccess = await page.$('text=Registration successful! Proceed to login');
+    expect(sawSuccess).toBeTruthy();
 
     // Step 7: Persist user credentials for future tests
     saveUser(user);

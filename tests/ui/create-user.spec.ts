@@ -45,7 +45,7 @@ test.describe('UI - Create user account', () => {
     const register = new RegisterPage(page);
     
     // Step 1: Generate fresh random user credentials for this test
-    const user = createRandomUser('e2e', true);
+    const user = createRandomUser('UI', true);
     await register.goto(baseURL.toString());
 
     // Step 2: Define common form field selectors for flexibility

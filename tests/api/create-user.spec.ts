@@ -53,7 +53,7 @@ test.describe('API - Create user account', () => {
     // Step 1: Generate random test credentials
     const random = Math.random().toString(36).substring(2, 8);
     const payload = {
-      email: `test+${random}@example.com`,
+      email: `API+${random}@example.com`,
       password: 'Password123!'
     };
 

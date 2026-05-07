@@ -14,9 +14,9 @@ export const LOGIN_SELECTORS = {
   
   // Email/Username input selector
   // Try multiple selectors in order of preference
-  // ✅ CONFIGURED FOR YOUR APP: Uses name="username"
+  // Configured for this app: uses name="username"
   emailInput: [
-    'input[name="username"]',      // ✅ Your app uses this
+    'input[name="username"]',      // App uses this selector
     'input[name="email"]',
     'input[type="email"]',
     'input[id="email"]',
@@ -26,18 +26,18 @@ export const LOGIN_SELECTORS = {
   ],
   
   // Password input selector
-  // ✅ CONFIGURED FOR YOUR APP: Uses name="password"
+  // Configured for this app: uses name="password"
   passwordInput: [
-    'input[type="password"]',      // ✅ Your app uses this
-    'input[name="password"]',      // ✅ Your app uses this
+    'input[type="password"]',      // App uses this selector
+    'input[name="password"]',      // App uses this selector
     'input[id="password"]',
   ],
   
   // Submit button selector
-  // ✅ CONFIGURED FOR YOUR APP: Uses type="submit"
+  // Configured for this app: uses type="submit"
   submitButton: [
-    'button[type="submit"]',       // ✅ Your app uses this
-    'button:has-text("Login")',    // ✅ Your app uses this text
+    'button[type="submit"]',       // App uses this selector
+    'button:has-text("Login")',    // App uses this text
     'button:has-text("Sign in")',
     'button:has-text("Sign In")',
     'button:has-text("Log in")',
@@ -47,9 +47,9 @@ export const LOGIN_SELECTORS = {
   ],
   
   // Error message container selectors
-  // ✅ CONFIGURED FOR YOUR APP: Uses #message
+  // Configured for this app: uses #message
   errorMessage: [
-    '#message',                    // ✅ Your app uses this
+    '#message',                    // App uses this selector
     '.error',
     '.alert',
     '.alert-danger',

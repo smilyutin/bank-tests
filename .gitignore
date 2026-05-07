@@ -8,3 +8,7 @@ allure-results-history/
 .allure/
 .env
 .DS_Store
+users.json
+fixtures/
+logs/
+screenshots/

@@ -214,7 +214,7 @@ export const OWASP_VULNERABILITIES = {
       'https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html'
     ]
   },
-  API8_INJECTION: {
+  API8_SECURITY_MISCONFIGURATION: {
     name: 'API8:2023 - Security Misconfiguration',
     description: 'Injection flaws occur when untrusted data is sent as part of a command or query, allowing attackers to execute unintended commands.',
     riskLevel: SecurityRiskLevel.CRITICAL,

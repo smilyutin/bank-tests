@@ -49,7 +49,7 @@ test('Clickjacking: X-Frame-Options header present', async ({ page }, testInfo) 
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -104,7 +104,7 @@ test('Clickjacking: CSP frame-ancestors directive present', async ({ page }, tes
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 

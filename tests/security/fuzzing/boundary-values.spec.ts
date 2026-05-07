@@ -217,7 +217,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
   }
   
   if (vulnerabilities.length > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilitiesFound: vulnerabilities.length,
       examples: vulnerabilities.slice(0, 3),
       passedTests,
@@ -234,7 +234,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
   } else {
     reporter.reportPass(
       `API handles numeric boundary values correctly (${passedTests} tests passed)`,
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -306,7 +306,7 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
   }
   
   if (issues > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       serverCrashes: issues,
       issue: 'Server crashed with extreme string lengths - buffer overflow risk'
     }, [
@@ -325,12 +325,12 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
         'Document maximum field lengths',
         'Validate input size before database operations'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API enforces reasonable string length limits',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -416,7 +416,7 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
   }
   
   if (crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       issue: 'Server crashed or exposed null reference errors'
     }, [
@@ -434,12 +434,12 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
         'Use schema validation (e.g., Joi, Yup, Zod)',
         'Return 400 with clear error for missing required fields'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   } else {
     reporter.reportPass(
       'API handles null and undefined values safely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });
@@ -515,7 +515,7 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
   }
   
   if (crashes > 0) {
-    reporter.reportVulnerability('API8_INJECTION', {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       crashes,
       issue: 'Server crashed with large array inputs'
     });
@@ -533,7 +533,7 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
   } else {
     reporter.reportPass(
       'API handles array boundary conditions safely',
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
 });

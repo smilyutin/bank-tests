@@ -2,8 +2,16 @@ import { test } from '@playwright/test';
 import { softCheck } from '../utils/utils';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 
+/**
+ * MIME-sniffing defense checks.
+ *
+ * Goal: ensure browsers receive strict content typing instructions
+ * (`X-Content-Type-Options: nosniff`) on primary and static resources.
+ */
+
 test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
+  // Validate primary document response first before expanding to resource checks.
   const response = await page.goto('/');
   
   if (!response) {
@@ -12,7 +20,7 @@ test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 
@@ -37,6 +45,7 @@ test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo
 });
 
 test('X-Content-Type-Options: present on all resources', async ({ page }, testInfo) => {
+  // Capture response stream to evaluate header consistency for loaded assets.
   await page.goto('/');
   
   // Collect all responses
@@ -54,7 +63,7 @@ test('X-Content-Type-Options: present on all resources', async ({ page }, testIn
     const headers = response.headers();
     const contentType = headers['content-type'] || '';
     
-    // Check critical content types
+    // Check critical content types where MIME confusion can be high impact.
     if (
       contentType.includes('javascript') ||
       contentType.includes('html') ||
@@ -83,7 +92,7 @@ test('Content-Type: properly set for responses', async ({ page }, testInfo) => {
       'Ensure application server is running and accessible',
       'Check network connectivity and firewall rules',
       'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API6_VUL_OUTDATED_COMPONENTS.name);
+    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
     return;
   }
 

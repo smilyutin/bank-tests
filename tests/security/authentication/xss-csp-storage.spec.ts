@@ -2,8 +2,18 @@ import { test } from '@playwright/test';
 import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
 import { SecurityReporter } from '../security-reporter';
 
+/**
+ * XSS and browser storage hardening checks.
+ *
+ * Design note:
+ * - Preconditions (user config, login reachability, base page reachability)
+ *   are reported via reportWarning with remediation instead of skip.
+ * - This keeps CI output explicit about why a check could not fully execute.
+ */
+
 test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
+  // Resolve a reusable authenticated test identity for storage checks.
   const user = await ensureTestUser(page.request as any);
   
   if (!user.email || !user.password) {
@@ -16,7 +26,7 @@ test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testI
     return;
   }
 
-  // Login via API
+  // Login via API to establish the same auth context used in production flows.
   const attempt = await tryLogin(page.request as any, user.email, user.password);
   if (!attempt) {
     reporter.reportWarning('Could not complete login via API', [
@@ -31,7 +41,7 @@ test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testI
   try {
     await page.goto('/');
     
-    // Check localStorage for tokens
+    // Inspect localStorage keys for token-like identifiers.
     const localStorage = await page.evaluate(() => {
       const items: Record<string, string> = {};
       for (let i = 0; i < window.localStorage.length; i++) {
@@ -66,6 +76,7 @@ test('XSS/Storage: sensitive tokens not in localStorage', async ({ page }, testI
 test('CSP: Content Security Policy header present', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
   try {
+    // Validate CSP directly from the primary document response headers.
     const response = await page.goto('/');
     
     if (!response) {
@@ -110,6 +121,7 @@ test('CSP: Content Security Policy header present', async ({ page }, testInfo) =
 test('XSS: sessionStorage does not contain sensitive data', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
   try {
+    // Evaluate the current browser session for accidental secret persistence.
     await page.goto('/');
     
     const sessionStorage = await page.evaluate(() => {

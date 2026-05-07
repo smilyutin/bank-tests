@@ -105,7 +105,7 @@ test('SQLi: parameterized queries for search/filter', async ({ request }, testIn
         'Automate test-user provisioning before injection security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -119,7 +119,7 @@ test('SQLi: parameterized queries for search/filter', async ({ request }, testIn
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so injection probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -233,7 +233,7 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
         'Automate test-user provisioning before injection security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -247,7 +247,7 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so injection probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -298,7 +298,7 @@ test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, tes
         'Automate test-user provisioning before injection security tests run',
         'Fail CI earlier if required auth fixtures are missing'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -312,7 +312,7 @@ test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, tes
         'If auth is cookie-based, add equivalent authenticated-request coverage to this suite',
         'Document auth transport mechanism so injection probes use the correct credential type'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -382,7 +382,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
         'Ensure Playwright baseURL points to the deployed target environment',
         'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }
@@ -404,7 +404,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
       const hasStackTrace = /stack|exception|traceback/i.test(text);
       
       if (res.status() >= 500) {
-        reporter.reportVulnerability('API8_INJECTION', {
+        reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
           endpoint: p,
           payload,
           statusCode: res.status(),
@@ -412,7 +412,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
           issue: 'Server error detected with injection payload - potential SQL/command injection vulnerability'
         });
       } else if (hasStackTrace) {
-        reporter.reportVulnerability('API8_INJECTION', {
+        reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
           endpoint: p,
           payload,
           statusCode: res.status(),
@@ -422,7 +422,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
       } else {
         reporter.reportPass(
           'API handled injection payload gracefully without server errors or information disclosure',
-          OWASP_VULNERABILITIES.API8_INJECTION.name
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
         );
       }
       break;
@@ -440,7 +440,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
         'Ensure CI target includes representative routes for security probing',
         'Add route metadata so tests can discover valid probe targets'
       ],
-      OWASP_VULNERABILITIES.API8_INJECTION.name
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
     return;
   }

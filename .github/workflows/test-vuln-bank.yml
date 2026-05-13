@@ -127,9 +127,6 @@ jobs:
             xvfb \
             x11-utils \
             x11-xserver-utils
-          echo "Installing Playwright system dependencies..."
-          npx playwright install --with-deps chromium
-          # npx playwright install-deps  # redundant, already covered above
           echo "System dependencies installed successfully"
       
       - name: Install Test Dependencies
@@ -141,8 +138,8 @@ jobs:
           npm config set registry https://registry.npmjs.org/
           npm ci --no-audit --no-fund --prefer-offline
           echo "Installing Playwright browsers..."
-          npx playwright install chromium
-          npx playwright --version
+          npx playwright@1.56.1 install chromium
+          npx playwright@1.56.1 --version
 
       # Clone APP Repo with fallback for PAT
       - name: Clone APP Repo (with PAT)

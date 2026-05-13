@@ -20,25 +20,6 @@ on:
         default: 'security'
         type: string
 
-  # Manual trigger with options
-  workflow_dispatch:
-    inputs:
-      app_branch:
-        description: 'APP branch to test'
-        required: false
-        default: 'main'
-        type: string
-      soft_mode:
-        description: 'Run in SOFT mode (warnings vs failures)'
-        required: false
-        default: 'false'
-        type: string
-      test_suite:
-        description: 'Which tests to run'
-        required: false
-        default: 'security'
-        type: string
-
 env:
   APP_REPO: 'smilyutin/vuln_bank'
   APP_SERVICE: 'web'
@@ -336,7 +317,7 @@ jobs:
           find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
           
           # Show test summary
-          if [ -f "$ALLURE_RESULTS_DIR"/*.json ]; then
+          if compgen -G "$ALLURE_RESULTS_DIR/*.json" > /dev/null; then
             echo ""
             echo "=== Test Result Summary ==="
             PASSED=$(grep -l '"status":"passed"' "$ALLURE_RESULTS_DIR"/*result.json 2>/dev/null | wc -l)
@@ -349,7 +330,11 @@ jobs:
             if [ $FAILED -gt 0 ]; then
               echo ""
               echo "=== Failed Tests ==="
-              grep -h '"name":' "$ALLURE_RESULTS_DIR"/*result.json | grep -B1 '"status":"failed"' | grep '"name"' | head -10
+              if compgen -G "$ALLURE_RESULTS_DIR/*result.json" > /dev/null; then
+                grep -h '"name":' "$ALLURE_RESULTS_DIR"/*result.json | grep -B1 '"status":"failed"' | grep '"name"' | head -10
+              else
+                echo "No detailed failed-test files were found."
+              fi
             fi
           fi
           

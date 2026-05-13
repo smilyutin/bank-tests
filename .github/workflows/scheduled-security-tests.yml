@@ -1,6 +1,11 @@
 name: Scheduled Security Tests
 
 on:
+  # Run on merges to main and every Friday at 2 AM UTC
+  push:
+    branches:
+      - main
+
   # Run every Friday at 2 AM UTC
   schedule:
     - cron: '0 2 * * 5'

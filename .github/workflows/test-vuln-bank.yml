@@ -137,15 +137,9 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           echo "Setting up test-repo dependencies..."
-          rm -rf node_modules package-lock.json
-          echo "Creating package.json..."
-          node -e 'require("fs").writeFileSync("package.json", JSON.stringify({name:"bank-tests",version:"1.0.0",private:true,scripts:{test:"playwright test"},devDependencies:{"@playwright/test":"1.40.0","allure-playwright":"2.0.0"}}, null, 2) + "\n")'
+          rm -rf node_modules
           npm config set registry https://registry.npmjs.org/
-          npm cache clean --force
-          npm install --no-audit --no-fund --prefer-offline
-          echo "Dependencies installed"
-          echo "Installed packages:"
-          npm list --depth=0
+          npm ci --no-audit --no-fund --prefer-offline
           echo "Installing Playwright browsers..."
           npx playwright install chromium
           npx playwright --version

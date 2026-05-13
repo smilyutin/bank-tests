@@ -183,11 +183,21 @@ export class DashboardPage {
 
   async checkSessionTimeout(timeoutMs: number = 30000) {
     const startTime = Date.now();
+    const initialUrl = this.page.url();
 
     // Leave headroom so the test itself doesn't hit the global timeout
     const safeWaitMs = Math.max(0, timeoutMs - 2000);
     if (safeWaitMs > 0) {
-      await this.page.waitForTimeout(safeWaitMs);
+      await new Promise(resolve => setTimeout(resolve, safeWaitMs));
+    }
+
+    if (this.page.isClosed()) {
+      return {
+        timeElapsed: Date.now() - startTime,
+        sessionValid: false,
+        currentUrl: initialUrl,
+        error: new Error('Page was closed before the session timeout check completed')
+      };
     }
 
     // Check if session is still valid
@@ -204,6 +214,7 @@ export class DashboardPage {
       return {
         timeElapsed: Date.now() - startTime,
         sessionValid: false,
+        currentUrl: initialUrl,
         error: e
       };
     }

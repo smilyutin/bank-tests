@@ -1,8 +1,8 @@
-name: Test Vulnerable Bank Application
+name: Run vuln_bank in Docker
 
 on:
-  # Manual trigger with options
-  workflow_dispatch:
+  # Allow reuse from other workflows
+  workflow_call:
     inputs:
       app_branch:
         description: 'APP branch to test'
@@ -22,9 +22,10 @@ on:
 
 env:
   APP_REPO: 'smilyutin/vuln_bank'
-  APP_BRANCH: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.app_branch) || 'main' }}
-  SOFT_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.soft_mode) || 'false' }}
-  TEST_SUITE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.test_suite) || 'security' }}
+  APP_SERVICE: 'web'
+  APP_BRANCH: ${{ inputs.app_branch || github.event.inputs.app_branch || 'main' }}
+  SOFT_MODE: ${{ inputs.soft_mode || github.event.inputs.soft_mode || (github.event_name == 'push' && github.ref_name == 'main' && '1') || 'false' }}
+  TEST_SUITE: ${{ inputs.test_suite || github.event.inputs.test_suite || 'security' }}
   BASE_URL: 'http://localhost:5001'
   NODE_VERSION: '20'
   ALLURE_RESULTS_DIR: ${{ github.workspace }}/test-repo/allure-results
@@ -32,6 +33,7 @@ env:
 
 jobs:
   test-application:
+    name: Run vuln_bank in Docker
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -106,9 +108,6 @@ jobs:
             xvfb \
             x11-utils \
             x11-xserver-utils
-          echo "Installing Playwright system dependencies..."
-          npx playwright install --with-deps chromium
-          # npx playwright install-deps  # redundant, already covered above
           echo "System dependencies installed successfully"
       
       - name: Install Test Dependencies
@@ -116,18 +115,12 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           echo "Setting up test-repo dependencies..."
-          rm -rf node_modules package-lock.json
-          echo "Creating package.json..."
-          node -e 'require("fs").writeFileSync("package.json", JSON.stringify({name:"bank-tests",version:"1.0.0",private:true,scripts:{test:"playwright test"},devDependencies:{"@playwright/test":"1.40.0","allure-playwright":"2.0.0"}}, null, 2) + "\n")'
+          rm -rf node_modules
           npm config set registry https://registry.npmjs.org/
-          npm cache clean --force
-          npm install --no-audit --no-fund --prefer-offline
-          echo "Dependencies installed"
-          echo "Installed packages:"
-          npm list --depth=0
+          npm ci --no-audit --no-fund --prefer-offline
           echo "Installing Playwright browsers..."
-          npx playwright install chromium
-          npx playwright --version
+          npx playwright@1.56.1 install chromium
+          npx playwright@1.56.1 --version
 
       # Clone APP Repo with fallback for PAT
       - name: Clone APP Repo (with PAT)
@@ -162,46 +155,15 @@ jobs:
             npm install
           fi
       
-      - name:  Setup Docker Configuration
+      - name:  Use APP Docker Configuration
         working-directory: ./app-repo
         run: |
-          if [ ! -f "docker-compose.yml" ]; then
-            echo "  No docker-compose.yml found, creating one..."
-            printf '%s\n' \
-              "version: '3.8'" \
-              "services:" \
-              "  app:" \
-              "    build: ." \
-              "    ports:" \
-              "      - \"5001:5001\"" \
-              "    environment:" \
-              "      - NODE_ENV=test" \
-              "      - PORT=5001" \
-              "    healthcheck:" \
-              "      test: [\"CMD-SHELL\", \"curl -f http://localhost:5001/health || curl -f http://localhost:5001/ || exit 1\"]" \
-              "      interval: 10s" \
-              "      timeout: 5s" \
-              "      retries: 5" \
-              "      start_period: 30s" \
-              > docker-compose.yml
-          else
-            echo " Found existing docker-compose.yml"
+          if [ ! -f "docker-compose.yml" ] || [ ! -f "Dockerfile" ]; then
+            echo "Expected vuln_bank Docker files were not found"
+            ls -la
+            exit 1
           fi
-          if [ ! -f "Dockerfile" ]; then
-            echo " No Dockerfile found, creating one..."
-            printf '%s\n' \
-              "FROM node:20-alpine" \
-              "WORKDIR /app" \
-              "COPY package*.json ./" \
-              "RUN npm ci --only=production || npm install --production" \
-              "COPY . ." \
-              "EXPOSE 5001" \
-              "HEALTHCHECK --interval=10s --timeout=5s --start-period=30s CMD wget --no-verbose --tries=1 --spider http://localhost:5001/health || exit 1" \
-              "CMD [\"npm\", \"start\"]" \
-              > Dockerfile
-          else
-            echo "Found existing Dockerfile"
-          fi
+          echo "Using Docker files from vuln_bank"
           echo "=== Docker Configuration ==="
           echo "Dockerfile:"
           cat Dockerfile
@@ -212,17 +174,17 @@ jobs:
       - name: Build APP Docker Image
         working-directory: ./app-repo
         run: |
-          echo "Building Docker image..."
-          docker build -t vuln-bank:test .
+          echo "Building Docker image from vuln_bank compose stack..."
+          docker compose build $APP_SERVICE
           echo "Image built successfully"
-          docker images | grep vuln-bank
+          docker images | grep vuln_bank || docker images | grep vuln-bank || true
       
       # ==================== START APP ====================
       - name:  Start APP Container
         working-directory: ./app-repo
         run: |
           echo "Starting application..."
-          docker compose up -d
+          docker compose up -d --build
           echo "Waiting for container to initialize..."
           sleep 10
           echo "Container status:"
@@ -355,7 +317,7 @@ jobs:
           find $ALLURE_RESULTS_DIR -type f | xargs ls -la 2>/dev/null || echo "No test results found"
           
           # Show test summary
-          if [ -f "$ALLURE_RESULTS_DIR"/*.json ]; then
+          if compgen -G "$ALLURE_RESULTS_DIR/*.json" > /dev/null; then
             echo ""
             echo "=== Test Result Summary ==="
             PASSED=$(grep -l '"status":"passed"' "$ALLURE_RESULTS_DIR"/*result.json 2>/dev/null | wc -l)
@@ -368,7 +330,11 @@ jobs:
             if [ $FAILED -gt 0 ]; then
               echo ""
               echo "=== Failed Tests ==="
-              grep -h '"name":' "$ALLURE_RESULTS_DIR"/*result.json | grep -B1 '"status":"failed"' | grep '"name"' | head -10
+              if compgen -G "$ALLURE_RESULTS_DIR/*result.json" > /dev/null; then
+                grep -h '"name":' "$ALLURE_RESULTS_DIR"/*result.json | grep -B1 '"status":"failed"' | grep '"name"' | head -10
+              else
+                echo "No detailed failed-test files were found."
+              fi
             fi
           fi
           
@@ -468,7 +434,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `[View Allure Report](${reportUrl})`
+              body: `The Allure report has been deployed to GitHub Pages:\n\n[Open the deployed report](${reportUrl})`
             })
       
       - name: Upload Artifacts
@@ -493,7 +459,7 @@ jobs:
           echo "Collecting docker compose logs..."
           docker compose logs > ../app-logs/docker-compose.log 2>&1
           echo "Collecting container logs..."
-          docker logs $(docker compose ps -q app) > ../app-logs/app-container.log 2>&1 || true
+          docker logs $(docker compose ps -q $APP_SERVICE) > ../app-logs/app-container.log 2>&1 || true
           echo "Collecting system info..."
           docker ps > ../app-logs/docker-ps.log 2>&1
           docker images > ../app-logs/docker-images.log 2>&1

@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
 import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -45,6 +46,7 @@ import * as path from 'path';
  * 3. Ensure proper dependency management
  */
 test('Dependencies: package.json exists and has dependencies', async ({}, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const packagePath = path.join(process.cwd(), 'package.json');
   
   if (!fs.existsSync(packagePath)) {
@@ -52,20 +54,27 @@ test('Dependencies: package.json exists and has dependencies', async ({}, testIn
     return;
   }
 
-  // Step 1: Read and parse package.json
+  // Read and parse package.json to see which dependencies are declared.
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
   
-  // Step 2: Check for dependency declarations
+  // Check that dependency declarations are present and readable.
   const hasDeps = 
     (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) ||
     (packageJson.devDependencies && Object.keys(packageJson.devDependencies).length > 0);
 
-  // Step 3: Verify dependencies are properly declared
+  // Verify the declared dependencies are available in the project metadata.
   softCheck(
     testInfo,
     hasDeps,
     'package.json should declare dependencies'
   );
+
+  if (hasDeps) {
+    reporter.reportPass(
+      'package.json exists and declares dependencies.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 /**
@@ -86,6 +95,7 @@ test('Dependencies: package.json exists and has dependencies', async ({}, testIn
  * 3. Ensure reproducible dependency resolution
  */
 test('Dependencies: package-lock.json exists for reproducible builds', async ({}, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const lockPath = path.join(process.cwd(), 'package-lock.json');
   const yarnLockPath = path.join(process.cwd(), 'yarn.lock');
   const pnpmLockPath = path.join(process.cwd(), 'pnpm-lock.yaml');
@@ -100,18 +110,23 @@ test('Dependencies: package-lock.json exists for reproducible builds', async ({}
     hasLockFile,
     'Lock file (package-lock.json, yarn.lock, or pnpm-lock.yaml) should exist for reproducible builds'
   );
+
+  if (hasLockFile) {
+    reporter.reportPass(
+      'A lock file exists for reproducible builds.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('Dependencies: no known vulnerable packages (check advisories)', async ({}, testInfo) => {
-  // This is a reminder test - actual vulnerability scanning should be done with npm audit or similar
-  softCheck(
-    testInfo,
-    true,
-    'Run "npm audit" or "yarn audit" regularly to check for vulnerable dependencies'
-  );
+  const reporter = new SecurityReporter(testInfo);
+  reporter.reportSkip('Dependency vulnerability status was not validated in this test.');
+  test.skip(true, 'This suite does not perform a live dependency vulnerability audit.');
 });
 
 test('Dependencies: version pinning or ranges are safe', async ({}, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const packagePath = path.join(process.cwd(), 'package.json');
   
   if (!fs.existsSync(packagePath)) {
@@ -140,29 +155,53 @@ test('Dependencies: version pinning or ranges are safe', async ({}, testInfo) =>
     unsafeRanges.length === 0,
     `Unsafe version ranges found (should use ^ or ~ for semver): ${unsafeRanges.slice(0, 5).join(', ') || 'none'}`
   );
+
+  if (unsafeRanges.length === 0) {
+    reporter.reportPass(
+      'Dependency version ranges are safe and do not use wildcard/latest/>= patterns.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('Supply chain: .npmrc or similar config exists', async ({}, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const npmrcPath = path.join(process.cwd(), '.npmrc');
   
-  if (fs.existsSync(npmrcPath)) {
-    const content = fs.readFileSync(npmrcPath, 'utf-8');
-    
-    // Check for security best practices
-    const hasRegistry = content.includes('registry=');
-    const usesHTTPS = content.includes('https://');
-    
-    if (hasRegistry) {
-      softCheck(
-        testInfo,
-        usesHTTPS,
-        '.npmrc should use HTTPS registry URLs'
-      );
-    }
+  if (!fs.existsSync(npmrcPath)) {
+    reporter.reportSkip('No .npmrc file was found, so registry configuration could not be validated.');
+    test.skip(true, 'No .npmrc file found');
+    return;
+  }
+
+  const content = fs.readFileSync(npmrcPath, 'utf-8');
+  
+  // Check for security best practices
+  const hasRegistry = content.includes('registry=');
+  const usesHTTPS = content.includes('https://');
+  
+  if (!hasRegistry) {
+    reporter.reportSkip('The .npmrc file does not declare a registry configuration to validate.');
+    test.skip(true, '.npmrc does not declare a registry setting');
+    return;
+  }
+
+  softCheck(
+    testInfo,
+    usesHTTPS,
+    '.npmrc should use HTTPS registry URLs'
+  );
+
+  if (usesHTTPS) {
+    reporter.reportPass(
+      '.npmrc registry configuration uses HTTPS.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
   }
 });
 
 test('Supply chain: no credentials in package files', async ({}, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const packagePath = path.join(process.cwd(), 'package.json');
   
   if (!fs.existsSync(packagePath)) {
@@ -184,4 +223,11 @@ test('Supply chain: no credentials in package files', async ({}, testInfo) => {
     !hasCredentials,
     'package.json should not contain credentials or secrets'
   );
+
+  if (!hasCredentials) {
+    reporter.reportPass(
+      'No credentials or secrets were found in package.json.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });

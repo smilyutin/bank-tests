@@ -1,5 +1,7 @@
 import { test } from '@playwright/test';
 import { softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { queryElements } from '../utils/dom';
 
 /**
  * Content Security Policy (CSP) and Subresource Integrity (SRI) Tests
@@ -42,111 +44,127 @@ import { softCheck } from '../utils/utils';
  * 3. Verify SRI protection is implemented
  */
 test('SRI: external scripts have integrity attributes', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  // Step 1: Identify external scripts without SRI protection
-  const scriptsWithoutSRI = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    const external = scripts.filter(script => {
-      const src = script.getAttribute('src');
-      return src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//'));
-    });
-    
-    // Step 2: Check for missing integrity attributes
-    return external
-      .filter(script => !script.hasAttribute('integrity'))
-      .map(script => script.getAttribute('src'));
-  });
+  // Identify external scripts that are missing SRI protection.
+  const scriptsWithoutSRI = (await queryElements(page, 'script[src]'))
+    .filter(script => script.src && (script.src.startsWith('http://') || script.src.startsWith('https://') || script.src.startsWith('//')))
+    .filter(script => !script.integrity)
+    .map(script => script.src);
 
-  // Step 3: Verify all external scripts have SRI protection
+  // Verify that every external script carries an SRI hash.
   softCheck(
     testInfo,
     scriptsWithoutSRI.length === 0,
     `External scripts without SRI integrity: ${scriptsWithoutSRI.join(', ') || 'none'}`
   );
+
+  if (scriptsWithoutSRI.length === 0) {
+    reporter.reportPass(
+      'All external scripts included Subresource Integrity attributes.',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('SRI: external stylesheets have integrity attributes', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const stylesWithoutSRI = await page.evaluate(() => {
-    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'));
-    const external = links.filter(link => {
-      const href = link.getAttribute('href');
-      return href && (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//'));
-    });
-    
-    return external
-      .filter(link => !link.hasAttribute('integrity'))
-      .map(link => link.getAttribute('href'));
-  });
+  const stylesWithoutSRI = (await queryElements(page, 'link[rel="stylesheet"][href]'))
+    .filter(link => link.href && (link.href.startsWith('http://') || link.href.startsWith('https://') || link.href.startsWith('//')))
+    .filter(link => !link.integrity)
+    .map(link => link.href);
 
   softCheck(
     testInfo,
     stylesWithoutSRI.length === 0,
     `External stylesheets without SRI integrity: ${stylesWithoutSRI.join(', ') || 'none'}`
   );
+
+  if (stylesWithoutSRI.length === 0) {
+    reporter.reportPass(
+      'All external stylesheets included Subresource Integrity attributes.',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('SRI: integrity hashes use strong algorithms', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const weakIntegrity = await page.evaluate(() => {
-    const elements = Array.from(document.querySelectorAll('[integrity]'));
-    return elements
-      .map(el => ({
-        src: el.getAttribute('src') || el.getAttribute('href'),
-        integrity: el.getAttribute('integrity'),
-      }))
-      .filter(item => {
-        const integrity = item.integrity || '';
-        // sha256, sha384, sha512 are acceptable
-        return !integrity.includes('sha256-') && !integrity.includes('sha384-') && !integrity.includes('sha512-');
-      });
-  });
+  const weakIntegrity = (await queryElements(page, '[integrity]'))
+    .map(item => ({
+      src: item.src || item.href,
+      integrity: item.integrity || '',
+    }))
+    .filter(item => {
+      const integrity = item.integrity;
+      return !integrity.includes('sha256-') && !integrity.includes('sha384-') && !integrity.includes('sha512-');
+    });
 
   softCheck(
     testInfo,
     weakIntegrity.length === 0,
     'SRI integrity attributes should use sha256, sha384, or sha512 algorithms'
   );
+
+  if (weakIntegrity.length === 0) {
+    reporter.reportPass(
+      'All integrity hashes use strong algorithms (sha256/sha384/sha512).',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('SRI: crossorigin attribute present with integrity', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const missingCrossorigin = await page.evaluate(() => {
-    const elements = Array.from(document.querySelectorAll('[integrity]'));
-    return elements
-      .filter(el => !el.hasAttribute('crossorigin'))
-      .map(el => el.getAttribute('src') || el.getAttribute('href'));
-  });
+  const missingCrossorigin = (await queryElements(page, '[integrity]'))
+    .filter(el => !el.crossorigin)
+    .map(el => el.src || el.href);
 
   softCheck(
     testInfo,
     missingCrossorigin.length === 0,
     'Elements with integrity attribute should also have crossorigin attribute'
   );
+
+  if (missingCrossorigin.length === 0) {
+    reporter.reportPass(
+      'All SRI-protected elements also included crossorigin attributes.',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('Supply chain: CDN resources use HTTPS', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const insecureCDN = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src], link[href]'));
-    return scripts
-      .map(el => el.getAttribute('src') || el.getAttribute('href'))
-      .filter(url => url && url.startsWith('http://') && !url.includes('localhost'));
-  });
+  const insecureCDN = (await queryElements(page, 'script[src], link[href]'))
+    .map(el => el.src || el.href)
+    .filter(url => url && url.startsWith('http://') && !url.includes('localhost'));
 
   softCheck(
     testInfo,
     insecureCDN.length === 0,
     `Insecure (HTTP) external resources found: ${insecureCDN.join(', ') || 'none'}`
   );
+
+  if (insecureCDN.length === 0) {
+    reporter.reportPass(
+      'All external CDN resources used HTTPS.',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('Supply chain: no untrusted CDN sources', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
   const trustedCDNs = [
@@ -160,12 +178,9 @@ test('Supply chain: no untrusted CDN sources', async ({ page }, testInfo) => {
     'fonts.gstatic.com',
   ];
 
-  const externalResources = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src], link[href]'));
-    return scripts
-      .map(el => el.getAttribute('src') || el.getAttribute('href'))
-      .filter(url => url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')));
-  });
+  const externalResources = (await queryElements(page, 'script[src], link[href]'))
+    .map(el => el.src || el.href)
+    .filter(url => url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')));
 
   const untrusted = externalResources.filter(url => {
     if (!url) return false;
@@ -173,12 +188,22 @@ test('Supply chain: no untrusted CDN sources', async ({ page }, testInfo) => {
     return !trustedCDNs.some(trusted => hostname.includes(trusted)) && !hostname.includes('localhost');
   });
 
-  // This is informational - not all external resources are bad
   if (untrusted.length > 0) {
-    softCheck(
-      testInfo,
-      true,
-      `External resources from non-standard CDNs (review needed): ${untrusted.slice(0, 5).join(', ')}`
+    reporter.reportWarning(
+      `External resources from non-standard CDNs were found: ${untrusted.slice(0, 5).join(', ')}`,
+      [
+        'Remove unnecessary third-party resources from non-standard CDNs.',
+        'Allowlist only trusted CDN hosts for scripts and styles.',
+        'Prefer SRI and HTTPS for any external resource that must remain.',
+        'Review whether each external resource is necessary for application functionality.'
+      ],
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
+    );
+    return;
+  } else {
+    reporter.reportPass(
+      'Only trusted CDN sources were used for external resources.',
+      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
     );
   }
 });

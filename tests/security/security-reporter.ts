@@ -440,10 +440,10 @@ export class SecurityReporter {
     
     // Always log summary to console for visibility
     const statusSymbol = {
-      [SecurityTestStatus.PASS]: '✅',
-      [SecurityTestStatus.FAIL]: '❌',
-      [SecurityTestStatus.SKIP]: '⏭️',
-      [SecurityTestStatus.WARNING]: '⚠️'
+      [SecurityTestStatus.PASS]: '',
+      [SecurityTestStatus.FAIL]: '',
+      [SecurityTestStatus.SKIP]: '',
+      [SecurityTestStatus.WARNING]: ''
     };
     
     console.log(`\n${statusSymbol[result.status]} ${result.testName}`);
@@ -468,20 +468,93 @@ export class SecurityReporter {
   /**
    * Format report as readable markdown
    */
+  private getResultExplanation(result: SecurityTestResult): string {
+    const evidenceReason = this.getEvidenceReason(result.evidence);
+    const description = result.status === SecurityTestStatus.SKIP
+      ? result.description.replace(/^Test skipped:\s*/i, '').trim()
+      : result.description.trim();
+
+    if (result.status === SecurityTestStatus.PASS) {
+      return evidenceReason
+        ? `Passed because ${evidenceReason}`
+        : description
+          ? `Passed because ${description}`
+          : `Passed because the tested behavior matched the expected secure outcome.`;
+    }
+
+    if (result.status === SecurityTestStatus.FAIL) {
+      return evidenceReason
+        ? `Failed because ${evidenceReason}`
+        : description
+          ? `Failed because ${description}`
+          : `Failed because the test detected a security issue or unsafe behavior.`;
+    }
+
+    if (result.status === SecurityTestStatus.SKIP) {
+      return evidenceReason
+        ? `Skipped because ${evidenceReason}`
+        : description
+          ? `Skipped because ${description}`
+          : `Skipped because the prerequisites for this test were not met.`;
+    }
+
+    return evidenceReason
+      ? `Completed with warning because ${evidenceReason}`
+      : description
+        ? `Completed with warning because ${description}`
+        : `Completed with warning because the test found a concern that did not warrant a hard failure.`;
+  }
+
+  private getEvidenceReason(evidence: any): string | null {
+    if (!evidence) return null;
+
+    if (typeof evidence === 'string') {
+      return evidence;
+    }
+
+    if (Array.isArray(evidence)) {
+      return evidence.length > 0 ? this.getEvidenceReason(evidence[0]) : null;
+    }
+
+    if (typeof evidence === 'object') {
+      const keys = ['issue', 'reason', 'message', 'description', 'detail'];
+      for (const key of keys) {
+        const value = evidence[key];
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+
+      if (Array.isArray(evidence.issues) && evidence.issues.length > 0) {
+        return this.getEvidenceReason(evidence.issues[0]);
+      }
+
+      if (Array.isArray(evidence.examples) && evidence.examples.length > 0) {
+        return this.getEvidenceReason(evidence.examples[0]);
+      }
+
+      if (evidence.vulnerability && typeof evidence.vulnerability === 'string') {
+        return evidence.vulnerability;
+      }
+    }
+
+    return null;
+  }
+
   private formatReport(result: SecurityTestResult): string {
     const statusEmoji = {
-      [SecurityTestStatus.PASS]: '✅',
-      [SecurityTestStatus.FAIL]: '❌',
-      [SecurityTestStatus.SKIP]: '⏭️',
-      [SecurityTestStatus.WARNING]: '⚠️'
+      [SecurityTestStatus.PASS]: '',
+      [SecurityTestStatus.FAIL]: '',
+      [SecurityTestStatus.SKIP]: '',
+      [SecurityTestStatus.WARNING]: ''
     };
 
     const riskEmoji = {
-      [SecurityRiskLevel.CRITICAL]: '🔴',
-      [SecurityRiskLevel.HIGH]: '🟠',
-      [SecurityRiskLevel.MEDIUM]: '🟡',
-      [SecurityRiskLevel.LOW]: '🟢',
-      [SecurityRiskLevel.INFO]: 'ℹ️'
+      [SecurityRiskLevel.CRITICAL]: '',
+      [SecurityRiskLevel.HIGH]: '',
+      [SecurityRiskLevel.MEDIUM]: '',
+      [SecurityRiskLevel.LOW]: '',
+      [SecurityRiskLevel.INFO]: ''
     };
 
     let report = `# Security Test Report\n\n`;
@@ -496,8 +569,10 @@ export class SecurityReporter {
 
     report += `\n## Description\n\n${result.description}\n`;
 
+    report += `\n## Why this result\n\n${this.getResultExplanation(result)}\n`;
+
     if (result.vulnerability) {
-      report += `\n## ⚠️ Vulnerability Detected\n\n${result.vulnerability}\n`;
+      report += `\n##  Vulnerability Detected\n\n${result.vulnerability}\n`;
     }
 
     if (result.evidence) {
@@ -505,21 +580,21 @@ export class SecurityReporter {
     }
 
     if (result.recommendations && result.recommendations.length > 0) {
-      report += `\n## 📋 Recommendations\n\n`;
+      report += `\n##  Recommendations\n\n`;
       result.recommendations.forEach((rec, idx) => {
         report += `${idx + 1}. ${rec}\n`;
       });
     }
 
     if (result.remediationSteps && result.remediationSteps.length > 0) {
-      report += `\n## 🔧 Remediation Steps\n\n`;
+      report += `\n##  Remediation Steps\n\n`;
       result.remediationSteps.forEach(step => {
         report += `${step}\n`;
       });
     }
 
     if (result.references && result.references.length > 0) {
-      report += `\n## 📚 References\n\n`;
+      report += `\n##  References\n\n`;
       result.references.forEach(ref => {
         report += `- ${ref}\n`;
       });
@@ -540,7 +615,7 @@ export class SecurityReporter {
     const skipped = this.results.filter(r => r.status === SecurityTestStatus.SKIP).length;
     const warnings = this.results.filter(r => r.status === SecurityTestStatus.WARNING).length;
 
-    return `Security Tests Summary: ✅ ${passed} passed, ❌ ${failed} failed, ⚠️ ${warnings} warnings, ⏭️ ${skipped} skipped`;
+    return `Security Tests Summary: ${passed} passed, ${failed} failed, ${warnings} warnings, ⏭️ ${skipped} skipped`;
   }
 
   /**

@@ -12,6 +12,8 @@ Comprehensive security testing suite covering OWASP API Security Top 10 2023, fu
 
 ## Test Categories
 
+> Shared probe logic follows the same category split under `tests/security/sec-objects/<category>/` so the spec folders and helper folders stay aligned.
+
 ### 🚨 Abuse
 Tests for protection against abuse and resource exhaustion:
 - **abuse/payload-size.spec.ts** - Validates server rejects oversized payloads
@@ -36,10 +38,10 @@ Tests for secure authentication mechanisms:
 ### 🔒 Authorization
 Tests for proper access control:
 - **authorization/idor.spec.ts** - Insecure Direct Object Reference protection (OWASP API1)
-- **authorization/roleScoping.spec.ts** - Role-based access control validation (OWASP API5)
+- **rbac/roleScoping.spec.ts** - Role-based access control validation (OWASP API5)
 - **authorization/mass-assignment.spec.ts** - Mass assignment protection (OWASP API6) ✨ NEW
 - **authorization/data-exposure.spec.ts** - Excessive data exposure detection (OWASP API3) ✨ NEW
-- **authorization/rbac-matrix.json** - Role permission test scenarios
+- **rbac/rbac-matrix.json** - Role permission test scenarios
 
 ### 🌐 CORS
 Cross-Origin Resource Sharing security:
@@ -83,7 +85,7 @@ Targets unsafe handling of special characters, encodings, and uncommon input:
 ### 🔄 CI/CD Security Regression
 Continuous security validation and regression detection:
 - **ci/security-regression.spec.ts** - Nightly regression checks (7 critical controls) ✨ NEW
-- **ci/token-expiration.spec.ts** - Token lifecycle validation (4 tests) ✨ NEW
+- **oauth/token-expiration.spec.ts** - Token lifecycle validation (4 tests) ✨ NEW
 - **ci/scan-results-audit.spec.ts** - Historical vulnerability tracking and trends ✨ NEW
 
 ### 🔗 Supply Chain
@@ -91,6 +93,16 @@ Third-party dependency security:
 - **supply-chain/csp-sri.spec.ts** - Subresource Integrity (SRI) for external resources
 - **supply-chain/dependency-security.spec.ts** - Package dependency auditing
 - **supply-chain/third-party-scripts.spec.ts** - Third-party script validation
+
+tests/security/sec-objects/
+├── authentication/            # Shared auth/session probe logic
+├── authorization/             # Shared access-control probe logic
+├── crossSiteReqForgery/        # Shared CSRF probe logic
+├── fuzzing/                    # Shared fuzzing helper logic
+├── headers/                    # Shared header probe logic
+├── input-attack/               # Shared input-anomaly helper logic
+├── ci/                         # Shared regression/audit helper logic
+└── oauth/                      # Shared token lifecycle helper logic
 
 ## Running Tests
 

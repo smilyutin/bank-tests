@@ -1,0 +1,119 @@
+{
+  "roles": {
+    "guest": {
+      "permissions": [
+        "read:public"
+      ],
+      "forbidden": [
+        "write:any",
+        "delete:any",
+        "read:users",
+        "admin:any"
+      ]
+    },
+    "user": {
+      "permissions": [
+        "read:public",
+        "read:own",
+        "write:own",
+        "delete:own"
+      ],
+      "forbidden": [
+        "read:other_users",
+        "write:other_users",
+        "delete:other_users",
+        "admin:any"
+      ]
+    },
+    "moderator": {
+      "permissions": [
+        "read:public",
+        "read:own",
+        "write:own",
+        "delete:own",
+        "read:users",
+        "moderate:content"
+      ],
+      "forbidden": [
+        "delete:users",
+        "admin:settings",
+        "admin:system"
+      ]
+    },
+    "admin": {
+      "permissions": [
+        "read:any",
+        "write:any",
+        "delete:any",
+        "admin:settings",
+        "admin:users",
+        "admin:system"
+      ],
+      "forbidden": []
+    }
+  },
+  "endpoints": [
+    {
+      "path": "/api/public",
+      "methods": ["GET"],
+      "allowed_roles": ["guest", "user", "moderator", "admin"]
+    },
+    {
+      "path": "/api/users/me",
+      "methods": ["GET", "PATCH"],
+      "allowed_roles": ["user", "moderator", "admin"]
+    },
+    {
+      "path": "/api/users/:id",
+      "methods": ["GET"],
+      "allowed_roles": ["moderator", "admin"]
+    },
+    {
+      "path": "/api/users/:id",
+      "methods": ["DELETE"],
+      "allowed_roles": ["admin"]
+    },
+    {
+      "path": "/api/admin/*",
+      "methods": ["GET", "POST", "PATCH", "DELETE"],
+      "allowed_roles": ["admin"]
+    }
+  ],
+  "test_scenarios": [
+    {
+      "description": "Guest cannot access user endpoints",
+      "role": "guest",
+      "endpoint": "/api/users/me",
+      "method": "GET",
+      "expected_status": 401
+    },
+    {
+      "description": "User cannot access other users",
+      "role": "user",
+      "endpoint": "/api/users/999",
+      "method": "GET",
+      "expected_status": 403
+    },
+    {
+      "description": "User cannot delete other users",
+      "role": "user",
+      "endpoint": "/api/users/999",
+      "method": "DELETE",
+      "expected_status": 403
+    },
+    {
+      "description": "Moderator cannot access admin endpoints",
+      "role": "moderator",
+      "endpoint": "/api/admin/settings",
+      "method": "GET",
+      "expected_status": 403
+    },
+    {
+      "description": "Admin can access admin endpoints",
+      "role": "admin",
+      "endpoint": "/api/admin/settings",
+      "method": "GET",
+      "expected_status": 200
+    }
+  ]
+}

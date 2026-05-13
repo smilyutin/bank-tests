@@ -10,6 +10,8 @@ const TARGET_APP_FIX_FIRST = [
   '4) Include Retry-After and X-RateLimit-* headers in throttled responses',
 ];
 
+// These probes measure whether auth and public endpoints slow down abusive traffic.
+
 /**
  * Rate Limiting and Abuse Prevention Tests
  * 
@@ -70,6 +72,7 @@ test('Rate limiting: excessive requests are throttled', async ({ request }, test
   // Step 1: Make rapid sequential requests to trigger rate limiting
   for (let i = 0; i < maxAttempts; i++) {
     try {
+      // Drive repeated login attempts through the same endpoint to provoke throttling.
       const res = await request.post(endpoint, {
         data: { email: user.email, username: user.email, password: 'test-' + i },
         headers: { 'content-type': 'application/json' },
@@ -119,15 +122,15 @@ test('Rate limiting: excessive requests are throttled', async ({ request }, test
   } else {
     if (all5xx) {
       reporter.reportWarning(
-        `Rate-limit verification is blocked by endpoint instability: ${maxAttempts} rapid POST requests to ${endpoint} all returned 5xx responses. ` +
+        `Environment limitation: rate-limit verification is blocked by endpoint instability. ${maxAttempts} rapid POST requests to ${endpoint} all returned 5xx responses. ` +
         `Observed status progression: ${statusSummary}. ` +
         `No 429 / Retry-After / rate-limit headers were observed, so throttling could not be confirmed. ` +
         `Risk: broken auth availability under load and potential brute-force exposure once endpoint is stable.`,
         [
           ...TARGET_APP_FIX_FIRST,
-          'Treat repeated 5xx on auth as a production-severity reliability/security incident',
-          `After stabilizing ${endpoint}, rerun abuse tests and enforce explicit 429 throttling behavior`,
-          'Instrument auth failures and 5xx spikes with alerts to detect active abuse or regressions',
+          'Treat repeated 5xx on auth as a production-severity reliability/security incident.',
+          `After stabilizing ${endpoint}, rerun abuse tests and enforce explicit 429 throttling behavior.`,
+          'Instrument auth failures and 5xx spikes with alerts to detect active abuse or regressions.',
         ],
         OWASP_VULNERABILITIES.API2_AUTH.name
       );
@@ -135,17 +138,17 @@ test('Rate limiting: excessive requests are throttled', async ({ request }, test
     }
 
     reporter.reportWarning(
-      `No rate limiting detected: ${maxAttempts} rapid POST requests to ${endpoint} did not trigger throttling signals (429/Retry-After/rate-limit headers). ` +
+      `True vulnerability: no rate limiting was detected. ${maxAttempts} rapid POST requests to ${endpoint} did not trigger throttling signals (429/Retry-After/rate-limit headers). ` +
       `Observed status progression: ${statusSummary}. ` +
       `${has5xx ? 'Some 5xx responses were observed, indicating endpoint instability during the probe. ' : ''}` +
       `Risk: account takeover via credential stuffing and service degradation under load.`,
       [
         ...TARGET_APP_FIX_FIRST,
-        `Add rate limiting middleware on ${endpoint} (e.g. express-rate-limit, nginx limit_req)`,
-        'Return HTTP 429 with a Retry-After header when the threshold is exceeded',
-        'Set a low threshold (e.g. 5–10 requests/min) specifically for authentication endpoints',
-        'Combine with account lockout after N consecutive failures for the same username',
-        'Add X-RateLimit-Limit / X-RateLimit-Remaining / X-RateLimit-Reset headers so clients can self-throttle',
+        `Add rate limiting middleware on ${endpoint} (e.g. express-rate-limit, nginx limit_req).`,
+        'Return HTTP 429 with a Retry-After header when the threshold is exceeded.',
+        'Set a low threshold (e.g. 5–10 requests/min) specifically for authentication endpoints.',
+        'Combine with account lockout after N consecutive failures for the same username.',
+        'Add X-RateLimit-Limit / X-RateLimit-Remaining / X-RateLimit-Reset headers so clients can self-throttle.',
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );
@@ -173,6 +176,7 @@ test('Rate limiting: 429 status includes Retry-After header', async ({ request }
   // Trigger rate limiting
   for (let i = 0; i < maxAttempts; i++) {
     try {
+      // Continue until the server either throttles or exhausts the probe window.
       const res = await request.post(endpoint, {
         data: { email: `test${i}@example.com`, username: `test${i}@example.com`, password: 'test' },
       });
@@ -195,16 +199,16 @@ test('Rate limiting: 429 status includes Retry-After header', async ({ request }
     const all5xx = statuses.length > 0 && statuses.every((s) => s >= 500);
     reporter.reportWarning(
       all5xx
-        ? `Retry-After validation failed because ${endpoint} returned only 5xx responses during the ${maxAttempts}-request probe (${statusSummary}). ` +
+        ? `Environment limitation: Retry-After validation could not confirm throttling because ${endpoint} returned only 5xx responses during the ${maxAttempts}-request probe (${statusSummary}). ` +
           `No 429 response was observed, so compliant throttling behavior could not be confirmed. ` +
           `Risk: unstable auth endpoint under load and missing abuse controls.`
-        : `Retry-After validation failed: no HTTP 429 response received after ${maxAttempts} requests to ${endpoint} (statuses: ${statusSummary}). ` +
+        : `True vulnerability: Retry-After validation failed because no HTTP 429 response was received after ${maxAttempts} requests to ${endpoint} (statuses: ${statusSummary}). ` +
           `Without a 429 response, clients never receive explicit retry guidance and abuse controls are likely missing or ineffective.`,
       [
         ...TARGET_APP_FIX_FIRST,
-        `Ensure ${endpoint} enforces deterministic rate-limit thresholds and returns HTTP 429 on excess requests`,
-        'Include Retry-After (or X-RateLimit-Reset) on every throttled response so clients can back off correctly',
-        'Stabilize auth endpoint behavior first if 5xx responses occur during rate-limit probes',
+        `Ensure ${endpoint} enforces deterministic rate-limit thresholds and returns HTTP 429 on excess requests.`,
+        'Include Retry-After (or X-RateLimit-Reset) on every throttled response so clients can back off correctly.',
+        'Stabilize auth endpoint behavior first if 5xx responses occur during rate-limit probes.',
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );
@@ -219,13 +223,13 @@ test('Rate limiting: 429 status includes Retry-After header', async ({ request }
     );
   } else {
     reporter.reportWarning(
-      `Rate limiting is active on ${endpoint} (returned 429) but the response is missing a Retry-After or X-RateLimit-Reset header. ` +
+      `True vulnerability: rate limiting is active on ${endpoint} (returned 429) but the response is missing a Retry-After or X-RateLimit-Reset header. ` +
       `Without this header, clients have no signal for when to retry, leading to immediate retry storms that amplify load.`,
       [
         ...TARGET_APP_FIX_FIRST,
-        'Add a Retry-After header (seconds until reset) to every 429 response',
-        'Alternatively expose X-RateLimit-Reset (Unix epoch) so clients can schedule retries precisely',
-        'Document the rate-limit policy in your API spec so integrators can design compliant clients',
+        'Add a Retry-After header (seconds until reset) to every 429 response.',
+        'Alternatively expose X-RateLimit-Reset (Unix epoch) so clients can schedule retries precisely.',
+        'Document the rate-limit policy in your API spec so integrators can design compliant clients.',
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );
@@ -269,6 +273,7 @@ test('Rate limiting (OWASP API4): DoS protection on public endpoints', async ({ 
   // Step 1: Send multiple rapid requests to test rate limiting
   for (let i = 0; i < maxAttempts; i++) {
     try {
+      // Use a low-risk public route so the probe stays non-destructive.
       const res = await api.get(target).catch(() => null);
       if (!res) continue;
       
@@ -310,16 +315,16 @@ test('Rate limiting (OWASP API4): DoS protection on public endpoints', async ({ 
     );
   } else {
     reporter.reportWarning(
-      `No rate limiting detected on public endpoint ${target} during a ${maxAttempts}-request burst — all requests returned non-429 responses. ` +
+      `True vulnerability: no rate limiting was detected on public endpoint ${target} during a ${maxAttempts}-request burst — all requests returned non-429 responses. ` +
       `Observed status progression: [${statuses.join(', ')}]. ` +
       `Risk: an unauthenticated attacker can flood this endpoint without restriction, potentially causing service degradation or exhausting server resources.`,
       [
         ...TARGET_APP_FIX_FIRST,
-        'Consider implementing rate limiting to prevent abuse',
-        'Use middleware like express-rate-limit or similar',
-        'Return 429 status code when limits exceeded',
-        'Add rate limit headers (X-RateLimit-*) to responses',
-        'Implement different limits for authenticated vs anonymous users'
+        'Consider implementing rate limiting to prevent abuse.',
+        'Use middleware like express-rate-limit or similar.',
+        'Return 429 status code when limits exceeded.',
+        'Add rate limit headers (X-RateLimit-*) to responses.',
+        'Implement different limits for authenticated vs anonymous users.'
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );
@@ -344,6 +349,7 @@ test('Rate limiting: per-IP or per-user limits exist', async ({ request }, testI
   // Make requests with same credentials
   for (let i = 0; i < 100; i++) {
     try {
+      // Reuse the same username so per-user throttling has a chance to trigger.
       const res = await request.post(endpoint, {
         data: { email: user.email, username: user.email, password: 'wrong-password' },
       });
@@ -371,15 +377,15 @@ test('Rate limiting: per-IP or per-user limits exist', async ({ request }, testI
     
   } else {
     reporter.reportWarning(
-      `No per-user rate limiting detected: ${responses.length} consecutive failed login attempts for "${user.email}" on ${endpoint} all completed without a 429. ` +
+      `True vulnerability: no per-user rate limiting was detected. ${responses.length} consecutive failed login attempts for "${user.email}" on ${endpoint} all completed without a 429. ` +
       `Response codes observed: ${statusSummary}. ` +
       `Risk: an attacker can perform unlimited password-guessing against any account with no server-side enforcement.`,
       [
         ...TARGET_APP_FIX_FIRST,
-        `Implement per-username (or per-IP) rate limiting on ${endpoint}`,
-        'Consider account lockout or CAPTCHA after 5–10 failed attempts for the same username',
-        'Use progressive delays (exponential back-off on the server) as an alternative to hard lockout',
-        'Emit security events / alerts on repeated failures so your SIEM can detect spraying campaigns',
+        `Implement per-username (or per-IP) rate limiting on ${endpoint}.`,
+        'Consider account lockout or CAPTCHA after 5–10 failed attempts for the same username.',
+        'Use progressive delays (exponential back-off on the server) as an alternative to hard lockout.',
+        'Emit security events / alerts on repeated failures so your SIEM can detect spraying campaigns.',
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );

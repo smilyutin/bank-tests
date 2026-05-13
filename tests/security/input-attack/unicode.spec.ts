@@ -24,9 +24,7 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * - Consistent UTF-8 encoding throughout
  */
 
-/**
- * Generate Unicode attack payloads
- */
+// Build payloads that cover normalization, homographs, bidi text, and control characters.
 function generateUnicodePayloads(): Array<{ name: string; value: string; attack: string }> {
   return [
     // Unicode normalization bypass
@@ -229,7 +227,7 @@ test('Unicode: normalization prevents validation bypass', async ({ baseURL }, te
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
+    reporter.reportSkip('Unicode normalization probe could not run because baseURL is not provided.');
     test.skip(true, 'baseURL not provided');
     return;
   }
@@ -261,7 +259,7 @@ test('Unicode: normalization prevents validation bypass', async ({ baseURL }, te
         
         const status = res.status();
         
-        // If it crashes or has errors
+        // Crashes or 5xx responses suggest unsafe Unicode handling.
         if (status >= 500) {
           issues.push({
             payload: payload.name,
@@ -274,12 +272,12 @@ test('Unicode: normalization prevents validation bypass', async ({ baseURL }, te
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for Unicode normalization testing');
+    reporter.reportSkip('Unicode normalization probe could not run because no target endpoints responded.');
     test.skip(true, 'No endpoints found');
     return;
   }
@@ -315,7 +313,7 @@ test('Unicode: homograph attacks detected', async ({ baseURL }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
+    reporter.reportSkip('Homograph probe could not run because baseURL is not provided.');
     test.skip(true, 'baseURL not provided');
     return;
   }
@@ -359,12 +357,12 @@ test('Unicode: homograph attacks detected', async ({ baseURL }, testInfo) => {
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for homograph testing');
+    reporter.reportSkip('Homograph probe could not run because no target endpoints responded.');
     test.skip(true, 'No endpoints found');
     return;
   }
@@ -377,13 +375,13 @@ test('Unicode: homograph attacks detected', async ({ baseURL }, testInfo) => {
     expect(crashes).toBe(0);
   } else if (acceptedHomograph > 0) {
     reporter.reportWarning(
-      `API accepted ${acceptedHomograph} homograph attacks - potential phishing risk`,
+      `True vulnerability: API accepted ${acceptedHomograph} homograph attacks, creating a phishing and identity-spoofing risk.`,
       [
-        'Validate emails contain only ASCII characters',
-        'Detect mixed-script strings (Latin + Cyrillic)',
-        'Use confusable character detection libraries',
-        'Implement punycode for internationalized domain names',
-        'Warn users about lookalike characters'
+        'Validate emails contain only ASCII characters where appropriate.',
+        'Detect mixed-script strings (Latin + Cyrillic).',
+        'Use confusable character detection libraries.',
+        'Implement punycode for internationalized domain names.',
+        'Warn users about lookalike characters.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -405,7 +403,7 @@ test('Unicode: zero-width characters handled', async ({ baseURL }, testInfo) => 
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
+    reporter.reportSkip('Zero-width character probe could not run because baseURL is not provided.');
     test.skip(true, 'baseURL not provided');
     return;
   }
@@ -442,24 +440,24 @@ test('Unicode: zero-width characters handled', async ({ baseURL }, testInfo) => 
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for zero-width testing');
+    reporter.reportSkip('Zero-width character probe could not run because no target endpoints responded.');
     test.skip(true, 'No endpoints found');
     return;
   }
   
   if (acceptedZeroWidth > 2) {
     reporter.reportWarning(
-      `API accepted ${acceptedZeroWidth} inputs with zero-width characters`,
+      `True vulnerability: API accepted ${acceptedZeroWidth} inputs with zero-width characters, which can bypass validation or create visually misleading identities.`,
       [
-        'Strip zero-width characters before validation',
-        'Reject strings containing invisible characters',
-        'Normalize strings to remove non-printable characters',
-        'Use character whitelist for email/username fields'
+        'Strip zero-width characters before validation.',
+        'Reject strings containing invisible characters.',
+        'Normalize strings to remove non-printable characters.',
+        'Use a character whitelist for email/username fields.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -481,7 +479,7 @@ test('Unicode: bidirectional text controlled', async ({ baseURL }, testInfo) => 
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
+    reporter.reportSkip('Bidirectional text probe could not run because baseURL is not provided.');
     test.skip(true, 'baseURL not provided');
     return;
   }
@@ -523,12 +521,12 @@ test('Unicode: bidirectional text controlled', async ({ baseURL }, testInfo) => 
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for bidi text testing');
+    reporter.reportSkip('Bidirectional text probe could not run because no target endpoints responded.');
     test.skip(true, 'No endpoints found');
     return;
   }
@@ -541,12 +539,12 @@ test('Unicode: bidirectional text controlled', async ({ baseURL }, testInfo) => 
     expect(crashes).toBe(0);
   } else if (acceptedBidi > 3) {
     reporter.reportWarning(
-      `API accepted ${acceptedBidi} inputs with bidirectional text controls`,
+      `True vulnerability: API accepted ${acceptedBidi} inputs with bidirectional text controls, which can enable spoofing or hidden-content attacks.`,
       [
-        'Strip or reject RTL/LTR override characters',
-        'Use Unicode bidirectional algorithm safely',
-        'Sanitize display strings separately from stored values',
-        'Consider blocking directional formatting characters'
+        'Strip or reject RTL/LTR override characters.',
+        'Use the Unicode bidirectional algorithm safely.',
+        'Sanitize display strings separately from stored values.',
+        'Consider blocking directional formatting characters.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );

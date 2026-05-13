@@ -1,5 +1,5 @@
 import type { APIRequestContext, Browser } from '@playwright/test';
-import { RegisterPage } from '../../ui/pages/registerPage';
+import { RegisterPage } from '../../ui/page-objects/register.page';
 import { saveUser } from '../../utils/credentials';
 import { buildRegisterFormSubmission } from './register-form.helpers';
 

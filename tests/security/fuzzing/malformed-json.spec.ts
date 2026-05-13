@@ -23,9 +23,7 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * - Reasonable processing time even for complex payloads
  */
 
-/**
- * Generate malformed JSON payloads
- */
+// Build malformed payloads that cover syntax errors, nesting, encoding, and size.
 function generateMalformedPayloads(): Array<{ name: string; payload: string; contentType?: string }> {
   return [
     // Invalid JSON syntax
@@ -106,9 +104,7 @@ function generateMalformedPayloads(): Array<{ name: string; payload: string; con
   ];
 }
 
-/**
- * Helper to create deeply nested objects
- */
+// Create nested objects for JSON depth and parser-complexity checks.
 function createDeeplyNested(depth: number): any {
   let obj: any = { value: 'deep' };
   for (let i = 0; i < depth; i++) {
@@ -139,12 +135,13 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportSkip('Environment limitation: baseURL is not provided, so malformed JSON validation cannot run.');
+    test.skip(true, 'Environment limitation: baseURL not provided');
     return;
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Probe the most likely registration routes first.
   const endpoints = ['/api/users', '/api/auth/register', '/api/register'];
   const payloads = generateMalformedPayloads();
   
@@ -156,7 +153,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
   
   for (const endpoint of endpoints) {
     try {
-      // Test subset of payloads to avoid overwhelming API
+      // Keep the payload sample small so the fuzz run stays practical.
       for (const { name, payload, contentType } of payloads.slice(0, 15)) {
         const res = await api.post(endpoint, {
           data: payload,
@@ -169,7 +166,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
         const status = res.status();
         const text = await res.text().catch(() => '');
         
-        // Check for server crashes (500 errors)
+        // A 500 here suggests malformed JSON triggered an unhandled path.
         if (status >= 500) {
           serverCrashes++;
           testResults.push({
@@ -179,7 +176,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
           });
         }
         
-        // Check for information disclosure in error messages
+        // Error strings that name the parser or syntax details should be treated as exposure.
         if (/SyntaxError|JSON\.parse|unexpected token|invalid json|parser error/i.test(text)) {
           informationLeaks++;
           testResults.push({
@@ -189,7 +186,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
           });
         }
         
-        // Check for stack traces
+        // Stack traces or file/line references should not appear in responses.
         if (/at\s+\w+\s+\(.*:\d+:\d+\)|^\s+at\s/m.test(text)) {
           informationLeaks++;
           testResults.push({
@@ -199,7 +196,7 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
           });
         }
         
-        // Should return 400, not 200/201
+        // Malformed JSON should be rejected rather than accepted as valid input.
         if ([200, 201].includes(status) && payload !== '{}') {
           improperHandling++;
           testResults.push({
@@ -217,12 +214,12 @@ test('Malformed JSON: user creation endpoint handles invalid JSON', async ({ bas
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No user creation endpoints found for malformed JSON testing');
-    test.skip(true, 'No user creation endpoints found');
+    reporter.reportSkip('Environment limitation: no user creation endpoints responded for malformed JSON testing.');
+    test.skip(true, 'Environment limitation: no user creation endpoints found');
     return;
   }
   
-  // Report findings
+  // Emit a compact summary so CI output stays readable.
   const totalIssues = serverCrashes + informationLeaks + improperHandling;
   
   if (totalIssues > 0) {
@@ -260,12 +257,13 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportSkip('Environment limitation: baseURL is not provided, so deep JSON nesting validation cannot run.');
+    test.skip(true, 'Environment limitation: baseURL not provided');
     return;
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Reuse the same routes for depth-only parsing checks.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   let endpointFound = false;
@@ -274,7 +272,7 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
   
   for (const endpoint of endpoints) {
     try {
-      // Test increasingly deep nesting
+      // Increase depth gradually so parser complexity remains observable.
       for (const depth of [10, 50, 100, 500]) {
         const startTime = Date.now();
         const payload = JSON.stringify(createDeeplyNested(depth));
@@ -289,11 +287,13 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
         if (!res) continue;
         endpointFound = true;
         
+        // Crashes at deeper levels indicate the parser is not handling recursion safely.
         if (res.status() >= 500) {
           crashed = true;
           break;
         }
         
+        // Slow responses here are a performance warning unless a crash or leak also appears.
         if (duration > 5000) {
           slowResponses++;
         }
@@ -306,8 +306,8 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for deep nesting test');
-    test.skip(true, 'No endpoints found');
+    reporter.reportSkip('Environment limitation: no endpoints responded for deep nesting test.');
+    test.skip(true, 'Environment limitation: no endpoints found');
     return;
   }
   
@@ -324,11 +324,11 @@ test('Malformed JSON: deeply nested structures handled safely', async ({ baseURL
     expect(crashed).toBeFalsy();
   } else if (slowResponses > 2) {
     reporter.reportWarning(
-      `${slowResponses} slow responses (>5s) with deeply nested JSON - potential DoS vector`,
+      `Performance-only concern: ${slowResponses} slow responses (>5s) occurred with deeply nested JSON, but no crash was observed. This suggests parser complexity or request-handling overhead rather than a confirmed vulnerability.`,
       [
-        'Implement JSON depth and complexity limits',
-        'Add request timeouts to prevent resource exhaustion',
-        'Consider early rejection of complex structures'
+        'Treat this as a performance hardening issue unless crashes or error disclosure are observed.',
+        'Implement JSON depth and complexity limits to keep parser work bounded.',
+        'Add request timeouts and early rejection for overly complex structures.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -350,12 +350,13 @@ test('Malformed JSON: large payload limits enforced', async ({ baseURL }, testIn
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportSkip('baseURL not provided');
-    test.skip(true, 'baseURL not provided');
+    reporter.reportSkip('Environment limitation: baseURL is not provided, so large-payload validation cannot run.');
+    test.skip(true, 'Environment limitation: baseURL not provided');
     return;
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Reuse the same routes for payload-size validation.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   let endpointFound = false;
@@ -364,7 +365,7 @@ test('Malformed JSON: large payload limits enforced', async ({ baseURL }, testIn
   
   for (const endpoint of endpoints) {
     try {
-      // Try progressively larger payloads
+      // Try a few payload sizes so the limit boundary can be observed.
       const sizes = [1000, 10000, 100000]; // characters
       
       for (const size of sizes) {
@@ -386,7 +387,7 @@ test('Malformed JSON: large payload limits enforced', async ({ baseURL }, testIn
           break;
         }
         
-        // Should reject very large payloads (>100KB)
+        // Very large payloads should be rejected or explicitly capped.
         if (size >= 100000 && [200, 201].includes(res.status())) {
           acceptedLargePayload = true;
         }
@@ -399,8 +400,8 @@ test('Malformed JSON: large payload limits enforced', async ({ baseURL }, testIn
   }
   
   if (!endpointFound) {
-    reporter.reportSkip('No endpoints found for large payload test');
-    test.skip(true, 'No endpoints found');
+    reporter.reportSkip('Environment limitation: no endpoints responded for large payload test.');
+    test.skip(true, 'Environment limitation: no endpoints found');
     return;
   }
   
@@ -416,12 +417,11 @@ test('Malformed JSON: large payload limits enforced', async ({ baseURL }, testIn
     expect(crashed).toBeFalsy();
   } else if (acceptedLargePayload) {
     reporter.reportWarning(
-      'API accepted very large payloads (>100KB) - potential DoS risk',
+      'Performance-only concern: the API accepted very large payloads (>100KB) without crashing. This increases memory/latency pressure but does not by itself prove a parser or validation vulnerability.',
       [
-        'Implement payload size limits',
-        'Return 413 for oversized requests',
-        'Document maximum payload sizes',
-        'Monitor memory usage during request processing'
+        'Treat this as a capacity/performance hardening issue unless crashes or errors are observed.',
+        'Implement request size limits and return HTTP 413 for oversized requests.',
+        'Document maximum payload sizes and monitor memory usage during request processing.'
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );

@@ -24,15 +24,15 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
   const reporter = new SecurityReporter(testInfo);
 
   if (!baseURL) {
-    reporter.reportWarning('baseURL not provided; skipping test', [], OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name);
-    test.skip();
+    reporter.reportSkip('baseURL not provided; skipping test');
+    test.skip(true, 'baseURL not provided');
     return;
   }
 
   const api = await request.newContext({ baseURL: baseURL.toString() });
   await ensureTestUser(api as any);
 
-  // Test endpoints with malformed/invalid payloads
+  // Send a few malformed payloads to see whether the API sanitizes errors properly.
   const testCases = [
     {
       endpoint: '/api/virtual-cards/create',
@@ -91,7 +91,7 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
       const status = res.status();
       const text = await res.text().catch(() => '');
 
-      // Endpoint missing/non-applicable in target app
+      // Treat missing routes as non-applicable rather than failing the suite.
       if (status === 404 || status === 405) {
         reporter.reportSkip(`${testCase.method} ${testCase.endpoint} not applicable (status ${status})`);
         continue;
@@ -102,7 +102,7 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
       // eslint-disable-next-line no-console
       console.log(`[error-handling] ${testCase.method} ${testCase.endpoint} => ${status}`);
 
-      // Check for stack traces in response (signatures of debug mode / unhandled exceptions)
+      // Look for stack-trace signatures or debug output in the response body.
       const stackTracePatterns = [
         /Traceback \(most recent call last\)/i,
         /File ".*\.py", line \d+/i,
@@ -128,7 +128,7 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
         }
       }
 
-      // 500 errors should NOT be returned for client validation issues
+      // Client-side validation mistakes should not become server errors.
       if (status === 500) {
         has500Errors = true;
         findings.push(`${testCase.method} ${testCase.endpoint}: returned 500 for client-side invalid input`);
@@ -140,7 +140,7 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
         );
       }
 
-      // Successful validation: 4xx response
+      // A 4xx response is the expected safe outcome here.
       if ([400, 401, 403, 422].includes(status)) {
         reporter.reportPass(
           `${testCase.method} ${testCase.endpoint} correctly returned ${status} for invalid input`,
@@ -157,14 +157,14 @@ test('API should return 4xx for invalid fields, not 500 with stack traces', asyn
       }
 
     } catch (err) {
-      // Network-level error; skip
+      // Treat a network-level failure as a non-applicable endpoint and move on.
       continue;
     }
   }
 
   if (!exercisedAny) {
     reporter.reportSkip('No applicable endpoints were available to assess API error handling behavior');
-    test.skip();
+    test.skip(true, 'No applicable endpoints were available to assess API error handling behavior');
     return;
   }
 

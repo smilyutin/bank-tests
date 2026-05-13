@@ -1,20 +1,14 @@
 import { test } from '@playwright/test';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { getMetaContent } from '../utils/dom';
 
 test('Referrer-Policy: header present', async ({ page }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
-    reporter.reportWarning(
-      'Referrer-Policy header check could not run because no response was received from the application root endpoint.',
-      [
-        'Ensure BASE_URL points to a reachable application URL',
-        'Stabilize application startup and health checks before header security tests run',
-        'Fail CI earlier when root-endpoint reachability checks fail'
-      ],
-      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Referrer-Policy header check could not run because no response was received from the application root endpoint.');
+    test.skip(true, 'No response was received from the application root endpoint');
     return;
   }
 
@@ -23,7 +17,7 @@ test('Referrer-Policy: header present', async ({ page }, testInfo) => {
 
   if (!referrerPolicy) {
     reporter.reportWarning(
-      'Referrer-Policy header should be present to control referrer information.',
+      'True vulnerability: no Referrer-Policy header was found, so referrer information is not explicitly controlled.',
       [
         'Set Referrer-Policy header globally at reverse proxy or application middleware level.',
         'Use a secure policy such as strict-origin-when-cross-origin or no-referrer.',
@@ -45,15 +39,8 @@ test('Referrer-Policy: uses secure value', async ({ page }, testInfo) => {
   const response = await page.goto('/');
   
   if (!response) {
-    reporter.reportWarning(
-      'Referrer-Policy secure-value check could not run because no response was received from the application root endpoint.',
-      [
-        'Ensure BASE_URL points to a reachable application URL',
-        'Stabilize application startup and health checks before header security tests run',
-        'Fail CI earlier when root-endpoint reachability checks fail'
-      ],
-      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Referrer-Policy secure-value check could not run because no response was received from the application root endpoint.');
+    test.skip(true, 'No response was received from the application root endpoint');
     return;
   }
 
@@ -62,7 +49,7 @@ test('Referrer-Policy: uses secure value', async ({ page }, testInfo) => {
 
   if (!referrerPolicy) {
     reporter.reportWarning(
-      'Referrer-Policy secure-value check failed because no Referrer-Policy header was found.',
+      'True vulnerability: Referrer-Policy secure-value check failed because no Referrer-Policy header was found.',
       [
         'Set Referrer-Policy header globally at reverse proxy or application middleware level',
         'Use strict-origin-when-cross-origin or no-referrer based on privacy requirements',
@@ -128,32 +115,22 @@ test('Referrer-Policy: meta tag matches header', async ({ page }, testInfo) => {
   const response = await page.goto('/');
   
   if (!response) {
-    reporter.reportWarning(
-      'Referrer-Policy header/meta consistency check could not run because no response was received from the application root endpoint.',
-      [
-        'Ensure BASE_URL points to a reachable application URL',
-        'Stabilize application startup and health checks before header security tests run',
-        'Fail CI earlier when root-endpoint reachability checks fail'
-      ],
-      OWASP_VULNERABILITIES.API7_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Referrer-Policy header/meta consistency check could not run because no response was received from the application root endpoint.');
+    test.skip(true, 'No response was received from the application root endpoint');
     return;
   }
 
   const headers = response.headers();
   const headerPolicy = headers['referrer-policy'];
 
-  const metaPolicy = await page.evaluate(() => {
-    const meta = document.querySelector('meta[name="referrer"]');
-    return meta?.getAttribute('content') || null;
-  });
+  const metaPolicy = await getMetaContent(page, 'meta[name="referrer"]');
 
   if (headerPolicy && metaPolicy) {
     const match = headerPolicy.toLowerCase() === metaPolicy.toLowerCase();
 
     if (!match) {
       reporter.reportWarning(
-        `Referrer-Policy mismatch between header (${headerPolicy}) and meta tag (${metaPolicy}).`,
+        `True vulnerability: Referrer-Policy mismatch between header (${headerPolicy}) and meta tag (${metaPolicy}).`,
         [
           'Use a single canonical Referrer-Policy source, preferably HTTP response headers.',
           'Align meta referrer value with the header policy if both are intentionally present.',
@@ -172,7 +149,7 @@ test('Referrer-Policy: meta tag matches header', async ({ page }, testInfo) => {
   }
 
   reporter.reportWarning(
-    'Referrer-Policy consistency check could not be fully validated because header or meta referrer value is absent.',
+    'Environment limitation: Referrer-Policy consistency check could not be fully validated because header or meta referrer value is absent.',
     [
       'Prefer serving Referrer-Policy via HTTP header as the canonical source',
       'If meta referrer is used, keep it consistent with the header value',

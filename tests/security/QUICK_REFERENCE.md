@@ -21,6 +21,8 @@ npx playwright show-report        # HTML report
 
 ## 📁 Test File Structure
 
+> Helper logic is grouped in matching subfolders under `tests/security/sec-objects/<category>/`.
+
 ```
 tests/security/
 ├── fuzzing/                   # 10 tests - API fuzzing
@@ -35,8 +37,10 @@ tests/security/
 │
 ├── ci/                        # 15 tests - CI/CD regression
 │   ├── security-regression.spec.ts
-│   ├── token-expiration.spec.ts
 │   └── scan-results-audit.spec.ts
+
+├── oauth/                     # 1 test - OAuth/token lifecycle
+│   └── token-expiration.spec.ts
 │
 ├── authorization/             # 5 tests - Access control
 │   ├── idor.spec.ts
@@ -53,15 +57,25 @@ tests/security/
 └── supply-chain/              # 3 tests - Dependencies
 ```
 
+tests/security/sec-objects/
+├── authentication/            # Shared auth/session probe logic
+├── authorization/             # Shared access-control probe logic
+├── crossSiteReqForgery/       # Shared CSRF probe logic
+├── fuzzing/                   # Shared fuzzing helper logic
+├── headers/                   # Shared header probe logic
+├── input-attack/              # Shared input-anomaly helper logic
+├── ci/                        # Shared regression/audit helper logic
+└── oauth/                     # Shared token lifecycle helper logic
+
 ## 🎯 OWASP API Security Top 10 Mapping
 
 | OWASP | Category | Tests | Files |
 |-------|----------|-------|-------|
 | **API1** | BOLA/IDOR | 3 | `authorization/idor.spec.ts`, `ci/security-regression.spec.ts` |
-| **API2** | Auth | 13 | `authentication/*`, `ci/token-expiration.spec.ts` |
+| **API2** | Auth | 13 | `authentication/*`, `oauth/token-expiration.spec.ts` |
 | **API3** | Data Exposure | 4 | `authorization/data-exposure.spec.ts`, `ci/security-regression.spec.ts` |
 | **API4** | Rate Limiting | 4 | `abuse/rate-limit.spec.ts`, `fuzzing/boundary-values.spec.ts` |
-| **API5** | BFLA | 2 | `authorization/roleScoping.spec.ts` |
+| **API5** | BFLA | 2 | `rbac/roleScoping.spec.ts` |
 | **API6** | Mass Assignment | 3 | `authorization/mass-assignment.spec.ts` |
 | **API7** | Misconfig | 10 | `headers/*`, `cors/*`, `ci/security-regression.spec.ts` |
 | **API8** | Injection | 32 | `input/*`, `fuzzing/*`, `input-attack/*` |

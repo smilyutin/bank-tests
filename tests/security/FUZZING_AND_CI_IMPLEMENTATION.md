@@ -33,7 +33,7 @@ You now have **comprehensive coverage** for fuzzing, input anomalies, and CI/CD 
 | File | Tests | Lines | Coverage |
 |------|-------|-------|----------|
 | **ci/security-regression.spec.ts** | 7 tests | 610 | Headers, auth, IDOR, SQL injection, rate limit, CORS, data exposure |
-| **ci/token-expiration.spec.ts** | 4 tests | 540 | Token expiry, refresh, logout, lifetime validation |
+| **oauth/token-expiration.spec.ts** | 4 tests | 540 | Token expiry, refresh, logout, lifetime validation |
 | **ci/scan-results-audit.spec.ts** | 4 tests | 570 | Regression detection, trend analysis, release quality, OWASP coverage |
 
 **Total: 15 CI/regression tests, 1,720 lines**
@@ -256,7 +256,7 @@ Attack Vectors: 45 path traversal techniques
 - Nightly cron job recommended
 ```
 
-#### 8. **ci/token-expiration.spec.ts**
+#### 8. **oauth/token-expiration.spec.ts**
 ```
 ✅ 4 Tests Created:
 ├── Expired tokens rejected

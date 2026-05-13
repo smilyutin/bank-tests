@@ -1,5 +1,6 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { generateFuzzPayloads, isJsonTransportableValue } from '../sec-objects/fuzzing/fuzz-payloads.logic';
 
 /**
  * API Fuzzing - Random Input Tests (OWASP API8:2023)
@@ -22,66 +23,6 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * - No 500 errors indicating unhandled exceptions
  * - Response times should remain reasonable
  */
-
-/**
- * Generate random fuzzing payloads
- */
-function generateFuzzPayloads(): Array<{ name: string; value: any }> {
-  return [
-    // Extreme numeric values
-    { name: 'max_int', value: 2147483647 },
-    { name: 'min_int', value: -2147483648 },
-    { name: 'overflow_int', value: 999999999999999999999 },
-    { name: 'negative_zero', value: -0 },
-    { name: 'infinity', value: Number.POSITIVE_INFINITY },
-    { name: 'negative_infinity', value: Number.NEGATIVE_INFINITY },
-    { name: 'nan', value: NaN },
-    
-    // Type confusion
-    { name: 'boolean_as_string', value: 'true' },
-    { name: 'number_as_string', value: '123' },
-    { name: 'null_value', value: null },
-    { name: 'undefined_value', value: undefined },
-    { name: 'empty_object', value: {} },
-    { name: 'empty_array', value: [] },
-    { name: 'nested_arrays', value: [[[[[]]]]] },
-    
-    // String edge cases
-    { name: 'empty_string', value: '' },
-    { name: 'whitespace', value: '   ' },
-    { name: 'null_byte', value: '\0' },
-    { name: 'newlines', value: '\n\n\n\n\n' },
-    { name: 'tabs', value: '\t\t\t\t' },
-    { name: 'unicode_emoji', value: '😀😁😂🤣😃😄😅😆' },
-    { name: 'unicode_rtl', value: '\u202E\u202D' },
-    { name: 'control_chars', value: '\x00\x01\x02\x03\x04\x05' },
-    
-    // Very long strings
-    { name: 'long_string_1k', value: 'A'.repeat(1000) },
-    { name: 'long_string_10k', value: 'B'.repeat(10000) },
-    { name: 'long_string_100k', value: 'C'.repeat(100000) },
-    
-    // Format strings and injections
-    { name: 'format_string', value: '%s%s%s%s%s%s%s%s' },
-    { name: 'sql_injection', value: "' OR '1'='1" },
-    { name: 'nosql_injection', value: { $ne: null } },
-    { name: 'command_injection', value: '; ls -la' },
-    { name: 'path_traversal', value: '../../../etc/passwd' },
-    { name: 'xss_script', value: '<script>alert(1)</script>' },
-    { name: 'xxe_payload', value: '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>' },
-    
-    // Arrays with unusual content
-    { name: 'array_of_nulls', value: [null, null, null] },
-    { name: 'mixed_types', value: [1, 'two', null, true, {}, []] },
-    { name: 'deeply_nested', value: { a: { b: { c: { d: { e: { f: 'deep' } } } } } } },
-    
-    // Special numeric formats
-    { name: 'scientific_notation', value: 1.23e+100 },
-    { name: 'hex_string', value: '0x1234567890ABCDEF' },
-    { name: 'octal_string', value: '0o777' },
-    { name: 'binary_string', value: '0b11111111' },
-  ];
-}
 
 /**
  * Test: Random input fuzzing on user creation endpoint
@@ -111,8 +52,9 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Probe the most likely user-creation routes first.
   const endpoints = ['/api/users', '/api/auth/register', '/api/register'];
-  const payloads = generateFuzzPayloads();
+  const payloads = generateFuzzPayloads().filter(payload => isJsonTransportableValue(payload.value));
   
   let endpointFound = false;
   let vulnerabilities: any[] = [];
@@ -120,7 +62,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
   
   for (const endpoint of endpoints) {
     try {
-      // Test a subset of payloads (first 10) to avoid overwhelming the API
+      // Limit the sample size so the fuzzing run stays lightweight.
       for (const payload of payloads.slice(0, 10)) {
         const testData = {
           email: payload.value,
@@ -139,7 +81,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
         const status = res.status();
         const text = await res.text().catch(() => '');
         
-        // Check for unhandled exceptions (500 errors)
+        // A 500 here suggests the payload uncovered an unhandled path.
         if (status >= 500) {
           vulnerabilities.push({
             endpoint,
@@ -149,7 +91,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
           });
         }
         
-        // Check for stack traces in response
+        // Stack traces or parser text in the body indicate error disclosure.
         if (/stack|traceback|exception|error at/i.test(text)) {
           vulnerabilities.push({
             endpoint,
@@ -159,7 +101,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
           });
         }
         
-        // Success if handled gracefully (400/422 or rejection)
+        // Treat validation errors and rejections as the safe outcome.
         if ([400, 401, 403, 422, 404].includes(status) && !/stack|traceback/i.test(text)) {
           successfulTests++;
         }
@@ -177,7 +119,7 @@ test('Fuzzing: user creation endpoint handles random inputs', async ({ baseURL }
     return;
   }
   
-  // Report findings
+  // Emit a single summary so CI output stays readable.
   if (vulnerabilities.length > 0) {
     reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
       vulnerabilitiesFound: vulnerabilities.length,
@@ -215,8 +157,9 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Probe common login routes and compare crash, disclosure, and timing behavior.
   const endpoints = ['/api/auth/login', '/api/login', '/login'];
-  const payloads = generateFuzzPayloads();
+  const payloads = generateFuzzPayloads().filter(payload => isJsonTransportableValue(payload.value));
   
   let endpointFound = false;
   let vulnerabilities: any[] = [];
@@ -224,6 +167,7 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
   
   for (const endpoint of endpoints) {
     try {
+      // Keep the probe window bounded so the timing signal remains practical.
       for (const payload of payloads.slice(0, 10)) {
         const startTime = Date.now();
         
@@ -240,7 +184,7 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
         const status = res.status();
         const text = await res.text().catch(() => '');
         
-        // Check for server errors
+        // A 500 from the auth endpoint suggests the fuzz input broke processing.
         if (status >= 500) {
           vulnerabilities.push({
             endpoint,
@@ -250,7 +194,7 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
           });
         }
         
-        // Check for information disclosure
+        // Generic error text is okay; account-existence hints are not.
         if (/user not found|invalid user|user does not exist/i.test(text)) {
           vulnerabilities.push({
             endpoint,
@@ -259,7 +203,7 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
           });
         }
         
-        // Check for unusual response times (possible timing attack)
+        // Extremely slow responses can be a denial-of-service signal.
         if (duration > 5000) {
           timingIssues.push({
             endpoint,
@@ -296,11 +240,11 @@ test('Fuzzing: authentication endpoint handles random inputs', async ({ baseURL 
     expect(vulnerabilities.length).toBe(0);
   } else if (timingIssues.length > 3) {
     reporter.reportWarning(
-      `Authentication endpoint had ${timingIssues.length} slow responses (>5s) with fuzz inputs`,
+      `Performance-only concern: authentication endpoint had ${timingIssues.length} slow responses (>5s) with fuzz inputs, but no crash or clear parser failure was observed.`,
       [
-        'Implement request timeouts to prevent resource exhaustion',
-        'Add input size limits before processing',
-        'Consider early rejection of invalid input types'
+        'Treat this as a capacity/performance hardening issue unless a crash, leak, or validation bypass is observed.',
+        'Implement request timeouts to prevent resource exhaustion.',
+        'Add input size limits and early rejection of invalid input types.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -328,6 +272,7 @@ test('Fuzzing: search/filter endpoints handle random inputs', async ({ baseURL }
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Probe read-only search and filter endpoints for crash behavior.
   const endpoints = [
     '/api/search',
     '/api/users?search=',
@@ -335,13 +280,15 @@ test('Fuzzing: search/filter endpoints handle random inputs', async ({ baseURL }
     '/api/query'
   ];
   
-  const payloads = generateFuzzPayloads();
+  const payloads = generateFuzzPayloads().filter(payload => isJsonTransportableValue(payload.value));
   let endpointFound = false;
   let issues = 0;
   
   for (const endpoint of endpoints) {
     try {
+      // Use only a small sample to keep the request volume low.
       for (const payload of payloads.slice(0, 5)) {
+        // Reuse query-style endpoints when the route already includes a query marker.
         const url = endpoint.includes('?') 
           ? `${endpoint}${encodeURIComponent(String(payload.value))}`
           : endpoint;

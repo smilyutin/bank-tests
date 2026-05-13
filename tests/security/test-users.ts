@@ -15,6 +15,7 @@ interface TestUser {
 }
 
 interface UsersFixture {
+  user?: TestUser;
   users: TestUser[];
 }
 
@@ -33,7 +34,8 @@ export function loadTestUsers(): TestUser[] {
   try {
     const fileContent = fs.readFileSync(fixturePath, 'utf-8');
     const fixture: UsersFixture = JSON.parse(fileContent);
-    cachedUsers = fixture.users;
+    const users = fixture.user ? [fixture.user] : (fixture.users || []);
+    cachedUsers = users;
     return cachedUsers;
   } catch (e) {
     console.warn('Could not load users.json:', e);

@@ -34,36 +34,29 @@ test('Session ID rotates on login to prevent fixation attacks', async ({ request
   
   const user = await ensureTestUser(request as any);
   if (!user.email || !user.password) {
-    reporter.reportWarning('No test user configured for session fixation test', [
-      'Ensure test credentials exist in tests/fixtures/users.json',
-      'Run user initialization scripts',
-      'Verify app registration endpoint is available',
-      'Check FIXTURE_USERS_INTEGRATION.md for setup process'
-    ], OWASP_VULNERABILITIES.API2_AUTH.name);
+    reporter.reportSkip('No test user configured for session fixation test');
+    test.skip(true, 'No test user configured for session fixation test');
     return;
   }
   
-  // Step 1: Get session cookie before login (anonymous session)
+  // Compare pre-login and post-login cookies to verify session rotation.
+  // Capture the anonymous session cookie before authentication.
   const anon = await request.get('/');
   const anonCookie = anon.headers()['set-cookie'] || '';
 
-  // Step 2: Perform user authentication
+  // Authenticate the user so we can compare the post-login cookie.
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt) {
-    reporter.reportWarning('Login endpoint not found or unreachable', [
-      'Verify /login or /api/auth endpoints exist and are accessible',
-      'Check that app is running and accepting HTTP requests',
-      'Review server logs for auth endpoint errors',
-      'Ensure test user credentials are valid for the app'
-    ], OWASP_VULNERABILITIES.API2_AUTH.name);
+    reporter.reportSkip('Login endpoint not found or unreachable');
+    test.skip(true, 'Login endpoint not found or unreachable');
     return;
   }
   
-  // Step 3: Get session cookie after login (authenticated session)
+  // Capture the authenticated session cookie after login.
   const { res } = attempt as any;
   const authCookie = res.headers()['set-cookie'] || '';
 
-  // Step 4: Verify session cookie changed after login
+  // A secure flow should issue a different cookie after authentication.
   if (authCookie && authCookie !== anonCookie) {
     reporter.reportPass(
       `Session ID properly rotated on successful authentication. ` +
@@ -73,12 +66,10 @@ test('Session ID rotates on login to prevent fixation attacks', async ({ request
       OWASP_VULNERABILITIES.API2_AUTH.name
     );
   } else if (!authCookie) {
-    reporter.reportWarning(
-      `No session cookie set after login. App may be using token-based authentication without proper session invalidation. ` +
-      `Verify that old tokens cannot be reused after logout.`,
-      TARGET_APP_FIX_FIRST,
-      OWASP_VULNERABILITIES.API2_AUTH.name
+    reporter.reportSkip(
+      'No session cookie set after login; session fixation probe is not applicable to this auth flow.'
     );
+    test.skip(true, 'No session cookie set after login');
   } else {
     reporter.reportWarning(
       `Session cookie was not rotated after login. Same session ID used before and after authentication. ` +

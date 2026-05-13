@@ -10,6 +10,8 @@ const TARGET_APP_FIX_FIRST = [
   '4) Add request size policy documentation and monitoring alerts for abuse spikes',
 ];
 
+// These probes check whether the app enforces practical request-size limits.
+
 /**
  * Payload Size Abuse Tests
  * 
@@ -40,8 +42,7 @@ const TARGET_APP_FIX_FIRST = [
  * - Cause server crashes or slowdowns
  * - Impact other users' experience
  * 
- * Test Strategy:
- * 1. Create a 10MB payload (common DoS attack size)
+ * Test Strategy: 
  * 2. Attempt to send it to a protected endpoint
  * 3. Verify the server rejects it with appropriate status code
  */
@@ -49,24 +50,25 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
   const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   if (!user.email) {
-    reporter.reportSkip('No persisted user');
+    reporter.reportSkip('Payload-size probe could not run because no persisted test user is available.');
     test.skip(true, 'No persisted user');
     return;
   }
 
   // Step 1: Create a large payload (> 10MB)
   // This simulates a DoS attack attempting to exhaust server resources
-  const largeString = 'A'.repeat(10 * 1024 * 1024);
+  const largeString = 'A'.repeat(10 * 1024 * 1024); // 10MB string to exceed typical limits
   const oversizedPayload = {
     email: user.email,
     password: user.password,
     extraData: largeString,
   };
 
+  // Use a login endpoint first so the payload is sent through a realistic auth flow.
   // Step 2: Verify login endpoint exists for testing
   const attempt = await tryLogin(request as any, user.email!, user.password!);
   if (!attempt) {
-    reporter.reportSkip('Login endpoint not found');
+    reporter.reportSkip('Environment limitation: payload-size probe could not run because no login endpoint was found.');
     test.skip(true, 'Login endpoint not found');
     return;
   }
@@ -85,6 +87,7 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
 
     const status = res.status();
     const statusSummary = `[${status}]`;
+    // Treat explicit rejections as protective behavior even when the status is not ideal.
     // Step 4: Verify server rejects oversized payloads
     // Expected responses: 413 (Payload Too Large), 400 (Bad Request), or 5xx (Server Error)
     const rejected = status === 413 || status === 400 || status >= 500;
@@ -101,7 +104,7 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
       );
     } else {
       reporter.reportWarning(
-        `Oversized payload may be accepted: endpoint ${path} returned status ${status} for a 10MB request. ` +
+        `True vulnerability: oversized payload may be accepted because endpoint ${path} returned status ${status} for a 10MB request. ` +
         `Observed status progression: ${statusSummary}. ` +
         `Risk: attackers can submit very large bodies to consume memory/CPU and degrade service availability.`,
         [
@@ -132,11 +135,11 @@ test('Payload size: server rejects oversized payloads', async ({ request }, test
     }
 
     reporter.reportWarning(
-      `Oversized payload test encountered an unexpected client/network error without clear size-limit evidence. Error: ${e?.message || 'unknown error'}`,
+      `Environment limitation: oversized payload test encountered an unexpected client/network error without clear size-limit evidence. Error: ${e?.message || 'unknown error'}`,
       [
         ...TARGET_APP_FIX_FIRST,
-        'Verify reverse proxy and application body-size limits are both configured',
-        'Ensure oversized request rejections are returned consistently as HTTP 413',
+        'Verify reverse proxy and application body-size limits are both configured.',
+        'Ensure oversized request rejections are returned consistently as HTTP 413.',
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );
@@ -166,6 +169,7 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
   const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
+  // This second probe checks whether moderately large requests are still bounded.
   // Step 1: Create a moderate-sized payload (5MB)
   // This tests for reasonable limits that should be enforced
   const mediumPayload = {
@@ -175,7 +179,7 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
   // Step 2: Verify login endpoint exists for testing
   const attempt = await tryLogin(request as any, user.email!, user.password!);
   if (!attempt) {
-    reporter.reportSkip('Login endpoint not found');
+    reporter.reportSkip('Environment limitation: moderate payload probe could not run because no login endpoint was found.');
     test.skip(true, 'Login endpoint not found');
     return;
   }
@@ -192,6 +196,7 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
     });
 
     const status = res.status();
+    // Accept a small set of defensive outcomes for this probe.
     const hasLimits = status === 413 || status === 400 || status === 404;
 
     if (hasLimits) {
@@ -202,14 +207,14 @@ test('Payload size: API has reasonable size limits', async ({ request }, testInf
       );
     } else {
       reporter.reportWarning(
-        `API may lack adequate payload size controls: endpoint ${path} returned status ${status} for a 5MB request. ` +
+        `True vulnerability: API may lack adequate payload size controls because endpoint ${path} returned status ${status} for a 5MB request. `+
         `Risk: sustained medium-size requests can consume server resources and degrade performance over time.`,
         [
           ...TARGET_APP_FIX_FIRST,
-          `Define explicit max request size on ${path} and reject with HTTP 413`,
-          'Set conservative body-parser limits for JSON/form content',
-          'Apply per-user/IP throttling for repeated large requests',
-          'Track and alert on request size percentile anomalies',
+          `Define explicit max request size on ${path} and reject with HTTP 413.`,
+          'Set conservative body-parser limits for JSON/form content.',
+          'Apply per-user/IP throttling for repeated large requests.',
+          'Track and alert on request size percentile anomalies.',
         ],
         OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
       );

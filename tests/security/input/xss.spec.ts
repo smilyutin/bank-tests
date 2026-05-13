@@ -1,5 +1,8 @@
 import { test } from '@playwright/test';
 import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
+import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { cspHasUnsafeInline, getContentSecurityPolicy } from '../utils/csp';
+import { pageHasAnySelector } from '../utils/dom';
 
 /**
  * XSS (Cross-Site Scripting) Vulnerability Tests
@@ -40,7 +43,8 @@ import { ensureTestUser, tryLogin, softCheck } from '../utils/utils';
  * 3. Verify that scripts do not execute
  */
 test('XSS: reflected XSS via URL parameters', async ({ page }, testInfo) => {
-  // Step 1: Define various XSS payloads to test
+  const reporter = new SecurityReporter(testInfo);
+  // Exercise a few classic reflected-XSS payload shapes.
   // These represent common XSS attack vectors
   const xssPayloads = [
     '<script>alert("XSS")</script>',                    // Basic script injection
@@ -49,24 +53,31 @@ test('XSS: reflected XSS via URL parameters', async ({ page }, testInfo) => {
     '<svg/onload=alert("XSS")>',                       // SVG onload handler
   ];
 
-  // Step 2: Test each XSS payload
+  // Send each payload through the URL and check whether it comes back unsanitized.
   for (const payload of xssPayloads) {
     try {
-      // Step 3: Inject payload via URL parameter
+      // Encode the payload before placing it into the query string.
       const encodedPayload = encodeURIComponent(payload);
       await page.goto(`/?search=${encodedPayload}`);
       await page.waitForTimeout(1000);
 
-      // Step 4: Check if payload is reflected in page without encoding
+      // If the raw payload is present, the reflection path is unsafe.
       const content = await page.content();
       const isVulnerable = content.includes(payload);
 
-      // Step 5: Verify payload was properly sanitized
+      // Treat raw reflection as a security finding.
       softCheck(
         testInfo,
         !isVulnerable,
         `Reflected XSS vulnerability: payload "${payload}" appears unencoded in page`
       );
+
+      if (!isVulnerable) {
+        reporter.reportPass(
+          `Reflected XSS payload "${payload}" was not reflected unencoded.`,
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+        );
+      }
 
       if (isVulnerable) break; // Stop after first vulnerability found
     } catch (e) {
@@ -95,6 +106,7 @@ test('XSS: reflected XSS via URL parameters', async ({ page }, testInfo) => {
  * 4. Check for proper input sanitization
  */
 test('XSS: stored XSS in user input fields', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(page.request as any);
   
   if (!user.email || !user.password) {
@@ -102,18 +114,18 @@ test('XSS: stored XSS in user input fields', async ({ page }, testInfo) => {
     return;
   }
 
-  // Step 1: Authenticate as a valid user
+  // Log in first so the stored-XSS probe runs against authenticated profile data.
   const attempt = await tryLogin(page.request as any, user.email, user.password);
   if (!attempt) {
     test.skip(true, 'Could not login');
     return;
   }
 
-  // Step 2: Define XSS payload for stored XSS testing
+  // Use a payload that flips a flag if it executes in the browser.
   const xssPayload = '<img src=x onerror="window.xssDetected=true">';
 
   try {
-    // Step 3: Navigate to profile page where user input is accepted
+    // Navigate to the profile page where user-controlled fields are updated.
     await page.goto('/profile').catch(() => {});
     
     // Step 4: Attempt to inject XSS in profile fields
@@ -123,7 +135,7 @@ test('XSS: stored XSS in user input fields', async ({ page }, testInfo) => {
       await page.click('button[type="submit"]').catch(() => {});
       await page.waitForTimeout(1000);
 
-      // Step 5: Check if XSS executed by looking for the detection flag
+      // Check the browser flag instead of relying on visual output.
       const xssExecuted = await page.evaluate(() => (window as any).xssDetected);
       
       // Step 6: Verify XSS was prevented
@@ -132,6 +144,13 @@ test('XSS: stored XSS in user input fields', async ({ page }, testInfo) => {
         !xssExecuted,
         'Stored XSS vulnerability: user input not properly sanitized'
       );
+
+      if (!xssExecuted) {
+        reporter.reportPass(
+          'Stored XSS payload did not execute after profile update.',
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+        );
+      }
     }
   } catch (e) {
     // Profile page might not exist - this is acceptable
@@ -139,6 +158,7 @@ test('XSS: stored XSS in user input fields', async ({ page }, testInfo) => {
 });
 
 test('XSS: DOM-based XSS protection', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     // Test common DOM XSS sinks
     await page.goto('/#<img src=x onerror=alert("XSS")>');
@@ -152,6 +172,13 @@ test('XSS: DOM-based XSS protection', async ({ page }, testInfo) => {
       !vulnerable,
       'Possible DOM-based XSS: fragment content rendered without sanitization'
     );
+
+    if (!vulnerable) {
+      reporter.reportPass(
+        'DOM fragment content was not rendered as executable HTML.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
+    }
   } catch (e) {
     // Expected
   }
@@ -184,6 +211,12 @@ test('XSS: JavaScript event handlers sanitized', async ({ page }, testInfo) => {
           `Event handler XSS vulnerability with payload: ${payload}`
         );
         break;
+      } else {
+        const reporter = new SecurityReporter(testInfo);
+        reporter.reportPass(
+          `JavaScript event-handler payload was not rendered as an executable handler: ${payload}`,
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+        );
       }
     } catch (e) {
       // Continue
@@ -192,7 +225,7 @@ test('XSS: JavaScript event handlers sanitized', async ({ page }, testInfo) => {
 });
 
 /**
- * Test: CSP blocks inline scripts
+ * Test: inline script execution is blocked by CSP
  * 
  * Purpose: Verifies that Content Security Policy (CSP) is properly implemented
  * to block inline script execution, which is a key defense against XSS attacks.
@@ -209,7 +242,8 @@ test('XSS: JavaScript event handlers sanitized', async ({ page }, testInfo) => {
  * 3. Verify script execution is blocked
  * 4. Confirm CSP is properly configured
  */
-test('XSS: CSP blocks inline scripts', async ({ page }, testInfo) => {
+test('XSS: inline script execution is blocked by CSP', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
@@ -217,11 +251,10 @@ test('XSS: CSP blocks inline scripts', async ({ page }, testInfo) => {
     return;
   }
 
-  // Step 1: Check for CSP header in response
-  const headers = response.headers();
-  const csp = headers['content-security-policy'];
+  // Read CSP before attempting the inline-script check.
+  const csp = getContentSecurityPolicy(response.headers());
 
-  // Step 2: Attempt to execute inline script
+  // Create an inline script element and see whether CSP blocks it.
   // This tests if CSP blocks inline script execution
   await page.evaluate(() => {
     try {
@@ -238,31 +271,36 @@ test('XSS: CSP blocks inline scripts', async ({ page }, testInfo) => {
   // Step 3: Check if inline script executed
   const executed = await page.evaluate(() => (window as any).inlineScriptExecuted);
 
-  // Step 4: Verify CSP blocks inline scripts
+  // Step 4: Verify CSP blocks inline script execution
   // Only check if CSP is present and doesn't allow unsafe-inline
-  if (csp && !csp.includes("'unsafe-inline'")) {
+  if (csp && !cspHasUnsafeInline(csp)) {
     softCheck(
       testInfo,
       !executed,
       'CSP should block inline script execution'
     );
+
+    if (!executed) {
+      reporter.reportPass(
+        'CSP blocked inline script execution.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
+    }
   }
 });
 
 test('XSS: output encoding for user-generated content', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   try {
     await page.goto('/');
     
-    // Check if any user content is displayed
-    const hasUserContent = await page.evaluate(() => {
-      const elements = document.querySelectorAll('[data-user-content], .user-content, .comment');
-      return elements.length > 0;
-    });
+    // Only inspect pages that actually render user-controlled content.
+    const hasUserContent = await pageHasAnySelector(page, ['[data-user-content]', '.user-content', '.comment']);
 
     if (hasUserContent) {
       const content = await page.content();
       
-      // Check for proper encoding of special characters
+      // Raw script tags should never survive HTML encoding.
       const hasRawHTML = 
         content.includes('&lt;script&gt;') && 
         !content.includes('<script>alert');
@@ -272,6 +310,13 @@ test('XSS: output encoding for user-generated content', async ({ page }, testInf
         hasRawHTML || !content.includes('<script'),
         'User-generated content should be HTML-encoded'
       );
+
+      if (hasRawHTML || !content.includes('<script')) {
+        reporter.reportPass(
+          'User-generated content was HTML-encoded.',
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+        );
+      }
     }
   } catch (e) {
     // Page might not exist

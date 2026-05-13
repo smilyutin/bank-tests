@@ -1,6 +1,7 @@
 import { test } from '@playwright/test';
 import { softCheck } from '../utils/utils';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { getInlineEventHandlers, pageBodyContainsAnyText, pageHasAnySelector, queryElements } from '../utils/dom';
 
 /**
  * Third-Party Scripts Security Tests
@@ -44,33 +45,36 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * 3. Verify non-blocking script loading
  */
 test('Third-party scripts: analytics scripts use async/defer', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  // Step 1: Identify analytics and tracking scripts
-  const blockingAnalytics = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    const analytics = scripts.filter(script => {
-      const src = script.getAttribute('src') || '';
+  // Identify analytics and tracking scripts loaded by the page.
+  const blockingAnalytics = (await queryElements(page, 'script[src]'))
+    .filter(script => {
+      const src = script.src || '';
       return (
         src.includes('google-analytics') ||
         src.includes('googletagmanager') ||
         src.includes('analytics') ||
         src.includes('tracking')
       );
-    });
-    
-    // Step 2: Check for missing async/defer attributes
-    return analytics
-      .filter(script => !script.hasAttribute('async') && !script.hasAttribute('defer'))
-      .map(script => script.getAttribute('src'));
-  });
+    })
+    .filter(script => !script.async && !script.defer)
+    .map(script => script.src);
 
-  // Step 3: Verify analytics scripts use non-blocking loading
+  // Verify that analytics scripts load in a non-blocking way.
   softCheck(
     testInfo,
     blockingAnalytics.length === 0,
     `Analytics scripts should use async/defer: ${blockingAnalytics.join(', ') || 'none'}`
   );
+
+  if (blockingAnalytics.length === 0) {
+    reporter.reportPass(
+      'Analytics scripts use async/defer and do not block page load.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 /**
@@ -91,36 +95,45 @@ test('Third-party scripts: analytics scripts use async/defer', async ({ page }, 
  * 3. Verify reasonable limit is maintained
  */
 test('Third-party scripts: limited to necessary domains', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const externalDomains = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    const domains = new Set<string>();
-    
-    scripts.forEach(script => {
-      const src = script.getAttribute('src');
-      if (src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//'))) {
+  const externalDomains = Array.from(new Set(
+    (await queryElements(page, 'script[src]'))
+      .map(script => script.src)
+      .filter((src): src is string => !!src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')))
+      .map(src => {
         try {
           const url = new URL(src.startsWith('//') ? 'https:' + src : src);
-          domains.add(url.hostname);
+          return url.hostname;
         } catch (e) {
-          // Invalid URL
+          return '';
         }
-      }
-    });
-    
-    return Array.from(domains);
-  });
+      })
+      .filter(Boolean)
+  ));
 
-  // More than 5 external domains might indicate excessive third-party scripts
-  softCheck(
-    testInfo,
-    externalDomains.length <= 5,
-    `High number of external script domains (${externalDomains.length}): review for necessity`
+  if (externalDomains.length === 0) {
+    reporter.reportPass(
+      'No external script domains were detected.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+    return;
+  }
+
+  reporter.reportWarning(
+    `Security concern: external script domains were detected (${externalDomains.length}): ${externalDomains.join(', ')}.`,
+    [
+      'Review whether each external script domain is strictly necessary.',
+      'Prefer self-hosted scripts or a small explicit allowlist of trusted domains.',
+      'Require CSP script-src allowlists and SRI for any unavoidable third-party resources.'
+    ],
+    OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
   );
 });
 
 test('Third-party scripts: CSP allows only trusted domains', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const response = await page.goto('/');
   
   if (!response) {
@@ -140,6 +153,13 @@ test('Third-party scripts: CSP allows only trusted domains', async ({ page }, te
       !hasWildcard,
       'CSP script-src should not use wildcards - enumerate trusted domains explicitly'
     );
+
+    if (!hasWildcard) {
+      reporter.reportPass(
+        'CSP script-src allows only trusted domains and avoids wildcards.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
+    }
   }
 });
 
@@ -153,26 +173,11 @@ test('Third-party scripts: no inline event handlers', async ({ page }, testInfo)
     return;
   }
   
-  const inlineHandlers = await page.evaluate(() => {
-    const elements = Array.from(document.querySelectorAll('*'));
-    const handlers: string[] = [];
-    
-    elements.forEach(el => {
-      const attrs = Array.from(el.attributes);
-      attrs.forEach(attr => {
-        // Only count executable inline handlers (non-empty values) to avoid false positives
-        if (attr.name.startsWith('on') && (attr.value || '').trim().length > 0) {
-          handlers.push(`${el.tagName}.${attr.name}="${(attr.value || '').trim().slice(0, 80)}"`);
-        }
-      });
-    });
-    
-    return Array.from(new Set(handlers)).slice(0, 10); // Dedupe and limit output
-  });
+  const inlineHandlers = await getInlineEventHandlers(page);
 
   if (inlineHandlers.length > 0) {
     reporter.reportWarning(
-      `Inline event handlers found (security risk): ${inlineHandlers.join(', ')}`,
+      `True vulnerability: inline event handlers were found: ${inlineHandlers.join(', ')}`,
       [
         'Remove inline event handlers (onclick, onerror, onload, etc.) from HTML markup.',
         'Bind events using external JavaScript modules (addEventListener) after DOM load.',
@@ -191,31 +196,22 @@ test('Third-party scripts: no inline event handlers', async ({ page }, testInfo)
 });
 
 test('Third-party scripts: tracking scripts respect privacy', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
   // Check for privacy-respecting analytics
-  const hasPrivacyConsent = await page.evaluate(() => {
-    const body = document.body.innerHTML;
-    return (
-      body.includes('cookie consent') ||
-      body.includes('privacy policy') ||
-      body.includes('gdpr') ||
-      document.querySelector('[data-cookieconsent]') !== null
-    );
-  });
+  const hasPrivacyConsent = (await pageBodyContainsAnyText(page, ['cookie consent', 'privacy policy', 'gdpr'])) ||
+    await pageHasAnySelector(page, ['[data-cookieconsent]']);
 
   // Check for tracking scripts
-  const hasTracking = await page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    return scripts.some(script => {
-      const src = script.getAttribute('src') || '';
-      return (
-        src.includes('google-analytics') ||
-        src.includes('facebook.net') ||
-        src.includes('doubleclick') ||
-        src.includes('tracking')
-      );
-    });
+  const hasTracking = (await queryElements(page, 'script[src]')).some(script => {
+    const src = script.src || '';
+    return (
+      src.includes('google-analytics') ||
+      src.includes('facebook.net') ||
+      src.includes('doubleclick') ||
+      src.includes('tracking')
+    );
   });
 
   if (hasTracking) {
@@ -224,29 +220,46 @@ test('Third-party scripts: tracking scripts respect privacy', async ({ page }, t
       hasPrivacyConsent,
       'If using tracking scripts, implement cookie consent/privacy notice'
     );
+
+    if (hasPrivacyConsent) {
+      reporter.reportPass(
+        'Tracking scripts are accompanied by visible privacy consent or notice.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
+    }
+  } else {
+    reporter.reportPass(
+      'No tracking scripts were detected on the evaluated page.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
   }
 });
 
 test('Third-party scripts: no deprecated or unmaintained libraries', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   await page.goto('/');
   
-  const deprecatedLibs = await page.evaluate(() => {
-    const deprecated = [
-      'jquery-1.', // Very old jQuery versions
-      'jquery-2.',
-      'angular.js/1.2', // Very old Angular
-      'moment.js', // Deprecated in favor of modern alternatives
-    ];
-    
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    return scripts
-      .map(s => s.getAttribute('src'))
-      .filter(src => src && deprecated.some(dep => src.includes(dep)));
-  });
+  const deprecated = [
+    'jquery-1.', // Very old jQuery versions
+    'jquery-2.',
+    'angular.js/1.2', // Very old Angular
+    'moment.js', // Deprecated in favor of modern alternatives
+  ];
+
+  const deprecatedLibs = (await queryElements(page, 'script[src]'))
+    .map(script => script.src)
+    .filter((src): src is string => !!src && deprecated.some(dep => src.includes(dep)));
 
   softCheck(
     testInfo,
     deprecatedLibs.length === 0,
     `Deprecated libraries detected: ${deprecatedLibs.join(', ') || 'none'}`
   );
+
+  if (deprecatedLibs.length === 0) {
+    reporter.reportPass(
+      'No deprecated or unmaintained libraries were detected in third-party scripts.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });

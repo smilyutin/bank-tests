@@ -13,6 +13,8 @@ export const LOGIN_CANDIDATES = [
   '/oauth/token',
   '/api/auth/login',
 ];
+
+// Return the configured login candidates, or the default list when no override is set.
 export function getLoginCandidates(): string[] {
   const env = process.env.SECURITY_LOGIN_PATH;
   if (env && env.trim()) {
@@ -27,6 +29,7 @@ export type CookieFlags = {
   sameSite?: string | null;
 };
 
+// Parse common cookie attributes from a Set-Cookie header.
 export function parseSetCookieFlags(setCookieHeader: string): CookieFlags {
   const parts = setCookieHeader.split(';').map(p => p.trim());
   const flags: CookieFlags = { httpOnly: false, secure: false, sameSite: null };
@@ -39,6 +42,7 @@ export function parseSetCookieFlags(setCookieHeader: string): CookieFlags {
   return flags;
 }
 
+// Extract a cookie value by name from one or more Set-Cookie headers.
 export function parseSetCookieValue(setCookieHeader: string, name: string): string | null {
   // setCookieHeader may contain multiple cookies separated by comma in some contexts
   const parts = Array.isArray(setCookieHeader) ? setCookieHeader : String(setCookieHeader).split(/,(?=\s*[^\s]+=)/);
@@ -49,6 +53,7 @@ export function parseSetCookieValue(setCookieHeader: string, name: string): stri
   return null;
 }
 
+// Map a soft-check message to an OWASP category.
 function inferSoftCheckCategory(message: string): string {
   const m = message.toLowerCase();
 
@@ -67,6 +72,7 @@ function inferSoftCheckCategory(message: string): string {
   return OWASP_VULNERABILITIES.API9_ASSET_MGMT.name;
 }
 
+// Generate remediation suggestions based on the soft-check message content.
 function inferSoftCheckRecommendations(message: string): string[] {
   const m = message.toLowerCase();
 
@@ -117,6 +123,7 @@ function inferSoftCheckRecommendations(message: string): string[] {
   ];
 }
 
+// Report a warning when a soft check fails, using inferred category and recommendations.
 export function softCheck(info: TestInfo, condition: boolean, message: string) {
   if (condition) return;
 
@@ -128,6 +135,7 @@ export function softCheck(info: TestInfo, condition: boolean, message: string) {
   );
 }
 
+// Probe login endpoints so later tests can use a reachable path if one exists.
 export async function findLoginEndpoint(request: APIRequestContext) {
   for (const path of LOGIN_CANDIDATES) {
     try {
@@ -141,6 +149,7 @@ export async function findLoginEndpoint(request: APIRequestContext) {
   return null;
 }
 
+// Try both JSON and form login styles and return token evidence when available.
 export async function tryLogin(request: APIRequestContext, email: string, password: string) {
   const candidates = getLoginCandidates();
   const tokenField = process.env.SECURITY_TOKEN_FIELD || 'token';
@@ -202,6 +211,7 @@ export async function tryLogin(request: APIRequestContext, email: string, passwo
   return null;
 }
 
+// Load or create a reusable security test user.
 export async function ensureTestUser(request: APIRequestContext) {
   const users = loadUsers();
   if (users && users.length) return users[0];

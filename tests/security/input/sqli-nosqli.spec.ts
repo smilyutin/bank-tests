@@ -42,7 +42,8 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * 4. Ensure proper parameterized queries are used
  */
 test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
-  // Step 1: Define common SQL injection payloads
+  const reporter = new SecurityReporter(testInfo);
+  // Try a small set of classic login-bypass payloads.
   const sqlPayloads = [
     "' OR '1'='1",                    // Classic authentication bypass
     "admin' --",                      // Comment-based injection
@@ -51,7 +52,7 @@ test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
     "1' UNION SELECT NULL, NULL, NULL --", // Union-based injection
   ];
 
-  // Step 2: Test each SQL injection payload
+  // Feed each payload into the login helper and check whether it is accepted.
   for (const payload of sqlPayloads) {
     const attempt = await tryLogin(request as any, payload, 'password');
     
@@ -59,7 +60,7 @@ test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
       const { res } = attempt as any;
       const status = res.status();
 
-      // Step 3: Verify SQL injection did not succeed
+      // A 2xx login response for a payload like this would be a strong warning.
       const vulnerable = status >= 200 && status < 300;
       
       if (vulnerable) {
@@ -71,7 +72,7 @@ test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
         break;
       }
 
-      // Step 4: Check for SQL error messages in response
+      // Search for database-specific error text that should stay hidden.
       try {
         const body = await res.text();
         const hasSQLError = 
@@ -86,6 +87,13 @@ test('SQLi: SQL injection in login form', async ({ request }, testInfo) => {
           !hasSQLError,
           'SQL error messages exposed in response (information disclosure)'
         );
+
+        if (!hasSQLError) {
+          reporter.reportPass(
+            'SQL injection payloads did not bypass login and no SQL errors were exposed.',
+            OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+          );
+        }
       } catch (e) {
         // Continue testing other payloads
       }
@@ -180,14 +188,14 @@ test('SQLi: parameterized queries for search/filter', async ({ request }, testIn
 test('NoSQLi: MongoDB injection in queries', async ({ request }, testInfo) => {
   const user = await ensureTestUser(request as any);
   
-  // Step 1: Define NoSQL injection payloads using MongoDB operators
+  // Use MongoDB-style operators that should not be interpreted as query syntax.
   const noSQLPayloads = [
     { email: { $gt: '' }, password: { $gt: '' } },    // Greater than empty string
     { email: { $ne: null }, password: { $ne: null } }, // Not equal to null
     { $where: 'this.password.length > 0' },            // JavaScript injection
   ];
 
-  // Step 2: Test each NoSQL injection payload
+  // Submit each payload and see whether the login endpoint accepts it.
   for (const payload of noSQLPayloads) {
     try {
       const res = await request.post('/api/login', {
@@ -198,11 +206,11 @@ test('NoSQLi: MongoDB injection in queries', async ({ request }, testInfo) => {
       const status = res.status();
       const vulnerable = status >= 200 && status < 300;
 
-      // Step 3: Check if authentication was bypassed
+      // A successful auth response here would mean the query was not safely bound.
       if (vulnerable) {
         try {
           const body = await res.json();
-          // Step 4: Verify no authentication token was generated
+          // A real token here would confirm the bypass.
           if (body.token || body.access_token) {
             softCheck(
               testInfo,
@@ -211,6 +219,11 @@ test('NoSQLi: MongoDB injection in queries', async ({ request }, testInfo) => {
             );
             break;
           }
+
+          reporter.reportPass(
+            'NoSQL injection payloads did not bypass authentication.',
+            OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+          );
         } catch (e) {
           // Continue testing other payloads
         }
@@ -254,7 +267,7 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
 
   const { token } = attempt as any;
 
-  // Test error-based injection
+  // Error-based payloads should produce generic failures, not database clues.
   const errorPayloads = [
     "1' AND 1=CONVERT(int, (SELECT @@version)) --",
     "1' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT @@version))) --",
@@ -267,6 +280,7 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
       });
 
       const body = await res.text().catch(() => '');
+      // Database vendor strings in the body suggest information disclosure.
       const hasDBInfo = 
         body.includes('MySQL') ||
         body.includes('PostgreSQL') ||
@@ -280,6 +294,11 @@ test('SQLi: error-based SQL injection detection', async ({ request }, testInfo) 
       );
 
       if (hasDBInfo) break;
+
+      reporter.reportPass(
+        'Error-based SQL injection payloads did not expose database information.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
     } catch (e) {
       // Continue
     }
@@ -319,7 +338,7 @@ test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, tes
 
   const { token } = attempt as any;
 
-  // Try common injection patterns
+  // Probe a few mixed SQL/NoSQL patterns against a profile update route.
   const injectionPatterns = [
     "'; DELETE FROM users WHERE '1'='1",
     "1' UNION ALL SELECT NULL--",
@@ -335,7 +354,7 @@ test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, tes
         data: { name: pattern, bio: pattern },
       });
 
-      // Should reject or sanitize malicious input
+      // Any 500 here suggests the endpoint is not safely validating input.
       const status = res.status();
       if (status === 500) {
         properlyProtected = false;
@@ -351,6 +370,13 @@ test('SQLi/NoSQLi: input sanitization in API endpoints', async ({ request }, tes
     properlyProtected,
     'API should properly sanitize input to prevent injection attacks'
   );
+
+  if (properlyProtected) {
+    reporter.reportPass(
+      'API input sanitization prevented the tested SQL/NoSQL injection patterns.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 /**
@@ -392,14 +418,14 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
   const payload = "' OR '1'='1"; // Basic SQL injection payload
   let probed = false;
   
-  // Step 1: Test injection payload on various endpoints
+  // Try the same payload against a few likely probe targets.
   for (const p of probePaths) {
     try {
-      // Step 2: Send injection payload as query parameter
+      // Send the payload in a query parameter so the backend has to parse it.
       const res = await api.get(p + `?q=${encodeURIComponent(payload)}`);
       probed = true;
       
-      // Step 3: Verify no server errors (500+ status codes)
+      // Look for server errors or explicit exception text in the response body.
       const text = await res.text().catch(() => '');
       const hasStackTrace = /stack|exception|traceback/i.test(text);
       
@@ -431,7 +457,7 @@ test('Injection (OWASP API8): SQL/command injection probe should not return serv
     }
   }
   
-  // Step 5: Fail with remediation if no endpoints were probeable
+  // Skip cleanly when the environment does not expose any probeable endpoints.
   if (!probed) {
     reporter.reportWarning(
       'Injection probe could not run because no probeable endpoints responded.',

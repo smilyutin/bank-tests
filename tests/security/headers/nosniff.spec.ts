@@ -15,21 +15,18 @@ test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo
   const response = await page.goto('/');
   
   if (!response) {
-    reporter.reportWarning('No response received from base URL', [
-      'Verify BASE_URL environment variable is set correctly',
-      'Ensure application server is running and accessible',
-      'Check network connectivity and firewall rules',
-      'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
+    reporter.reportSkip('No response received from base URL');
+    test.skip(true, 'No response received from base URL');
     return;
   }
 
   const headers = response.headers();
   const nosniff = headers['x-content-type-options'];
+  const nosniffIsPresent = !!nosniff;
 
   softCheck(
     testInfo,
-    !!nosniff,
+    nosniffIsPresent,
     'X-Content-Type-Options header should be present'
   );
 
@@ -41,6 +38,13 @@ test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo
       isNosniff,
       `X-Content-Type-Options should be 'nosniff' (got: ${nosniff})`
     );
+
+    if (isNosniff) {
+      reporter.reportPass(
+        'X-Content-Type-Options is set to nosniff.',
+        OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+      );
+    }
   }
 });
 
@@ -80,6 +84,13 @@ test('X-Content-Type-Options: present on all resources', async ({ page }, testIn
     missingNosniff === 0,
     `${missingNosniff} resources missing X-Content-Type-Options: nosniff header`
   );
+
+  if (missingNosniff === 0) {
+    reporter.reportPass(
+      'All critical script, HTML, and CSS responses included X-Content-Type-Options: nosniff.',
+      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+    );
+  }
 });
 
 test('Content-Type: properly set for responses', async ({ page }, testInfo) => {
@@ -87,12 +98,8 @@ test('Content-Type: properly set for responses', async ({ page }, testInfo) => {
   const response = await page.goto('/');
   
   if (!response) {
-    reporter.reportWarning('No response received from base URL', [
-      'Verify BASE_URL environment variable is set correctly',
-      'Ensure application server is running and accessible',
-      'Check network connectivity and firewall rules',
-      'Review server logs for startup or configuration errors'
-    ], OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name);
+    reporter.reportSkip('No response received from base URL');
+    test.skip(true, 'No response received from base URL');
     return;
   }
 
@@ -116,6 +123,13 @@ test('Content-Type: properly set for responses', async ({ page }, testInfo) => {
         hasCharset,
         'Text content should specify charset in Content-Type header'
       );
+
+      if (hasCharset) {
+        reporter.reportPass(
+          `Content-Type is set correctly with charset (${contentType}).`,
+          OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+        );
+      }
     }
   }
 });

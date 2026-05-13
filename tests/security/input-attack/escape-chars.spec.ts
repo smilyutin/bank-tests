@@ -24,9 +24,7 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * - Proper validation before storage
  */
 
-/**
- * Generate escape character test payloads
- */
+// Build payloads that cover SQL, XSS, command, path, LDAP, NoSQL, XML, and regex metacharacters.
 function generateEscapePayloads(): Array<{ name: string; value: string; type: string; risk: string }> {
   return [
     // SQL injection characters
@@ -130,15 +128,8 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportWarning(
-      'Escape-character SQL probe could not run because baseURL is not provided.',
-      [
-        'Set BASE_URL in CI before running input-attack security tests',
-        'Ensure Playwright baseURL points to the deployed target environment',
-        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character SQL probe could not run because baseURL is not provided.');
+    test.skip(true, 'baseURL not provided');
     return;
   }
   
@@ -169,7 +160,7 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
         const status = res.status();
         const text = await res.text().catch(() => '');
         
-        // Check for SQL errors in response
+        // SQL error text in the response is a sign of information disclosure.
         if (/sql|syntax error|mysql|postgres|sqlite|oracle|column|table/i.test(text) && status >= 400) {
           vulnerabilities.push({
             payload: payload.name,
@@ -180,7 +171,7 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
           });
         }
         
-        // Server crashes indicate poor error handling
+        // Crashes or 5xx responses indicate poor error handling.
         if (status >= 500) {
           vulnerabilities.push({
             payload: payload.name,
@@ -196,20 +187,13 @@ test('Escape Chars: SQL injection characters properly escaped', async ({ baseURL
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportWarning(
-      'Escape-character SQL probe could not run because no target endpoints responded.',
-      [
-        'Expose/document at least one user registration or input-processing endpoint',
-        'Ensure CI target includes representative endpoints for SQL escaping checks',
-        'Add route metadata so security tests can discover valid probe targets'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character SQL probe could not run because no target endpoints responded.');
+    test.skip(true, 'No target endpoints responded');
     return;
   }
   
@@ -245,15 +229,8 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportWarning(
-      'Escape-character XSS probe could not run because baseURL is not provided.',
-      [
-        'Set BASE_URL in CI before running input-attack security tests',
-        'Ensure Playwright baseURL points to the deployed target environment',
-        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character XSS probe could not run because baseURL is not provided.');
+    test.skip(true, 'baseURL not provided');
     return;
   }
   
@@ -288,8 +265,7 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
           crashes++;
         }
         
-        // API should accept these (storage is OK, output encoding matters)
-        // But we check they don't crash the server
+        // Storage is acceptable here; the key check is that the payload does not crash the server.
         if ([200, 201].includes(status)) {
           acceptedXSS++;
         }
@@ -297,20 +273,13 @@ test('Escape Chars: XSS characters properly encoded', async ({ baseURL }, testIn
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportWarning(
-      'Escape-character XSS probe could not run because no target endpoints responded.',
-      [
-        'Expose/document at least one user registration or input-processing endpoint',
-        'Ensure CI target includes representative endpoints for XSS escaping checks',
-        'Add route metadata so security tests can discover valid probe targets'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character XSS probe could not run because no target endpoints responded.');
+    test.skip(true, 'No target endpoints responded');
     return;
   }
   
@@ -343,15 +312,8 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportWarning(
-      'Escape-character command-injection probe could not run because baseURL is not provided.',
-      [
-        'Set BASE_URL in CI before running input-attack security tests',
-        'Ensure Playwright baseURL points to the deployed target environment',
-        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character command-injection probe could not run because baseURL is not provided.');
+    test.skip(true, 'baseURL not provided');
     return;
   }
   
@@ -385,20 +347,13 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportWarning(
-      'Escape-character command-injection probe could not run because no target endpoints responded.',
-      [
-        'Expose/document at least one user registration or input-processing endpoint',
-        'Ensure CI target includes representative endpoints for command-injection checks',
-        'Add route metadata so security tests can discover valid probe targets'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character command-injection probe could not run because no target endpoints responded.');
+    test.skip(true, 'No target endpoints responded');
     return;
   }
   
@@ -420,6 +375,11 @@ test('Escape Chars: command injection metacharacters filtered', async ({ baseURL
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
   }
+
+  reporter.reportPass(
+    'Command injection metacharacters were handled without server crashes or obvious injection success.',
+    OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
+  );
 });
 
 /**
@@ -432,15 +392,8 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportWarning(
-      'Escape-character path-traversal probe could not run because baseURL is not provided.',
-      [
-        'Set BASE_URL in CI before running input-attack security tests',
-        'Ensure Playwright baseURL points to the deployed target environment',
-        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character path-traversal probe could not run because baseURL is not provided.');
+    test.skip(true, 'baseURL not provided');
     return;
   }
   
@@ -467,7 +420,7 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
           crashes++;
         }
         
-        // Should not return 200 for traversal attempts
+        // A 200 for traversal attempts would mean the path filter failed.
         if (status === 200) {
           acceptedTraversal++;
         }
@@ -475,20 +428,13 @@ test('Escape Chars: path traversal sequences blocked', async ({ baseURL }, testI
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportWarning(
-      'Escape-character path-traversal probe could not run because no target endpoints responded.',
-      [
-        'Expose/document at least one file or input-processing endpoint',
-        'Ensure CI target includes representative endpoints for path-traversal checks',
-        'Add route metadata so security tests can discover valid probe targets'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character path-traversal probe could not run because no target endpoints responded.');
+    test.skip(true, 'No target endpoints responded');
     return;
   }
   
@@ -524,15 +470,8 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
   const reporter = new SecurityReporter(testInfo);
   
   if (!baseURL) {
-    reporter.reportWarning(
-      'Escape-character NoSQL probe could not run because baseURL is not provided.',
-      [
-        'Set BASE_URL in CI before running input-attack security tests',
-        'Ensure Playwright baseURL points to the deployed target environment',
-        'Fail the pipeline earlier when baseURL is missing to avoid incomplete security coverage'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character NoSQL probe could not run because baseURL is not provided.');
+    test.skip(true, 'baseURL not provided');
     return;
   }
   
@@ -547,7 +486,7 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
   for (const endpoint of endpoints) {
     try {
       for (const payload of nosqlPayloads) {
-        // Try sending NoSQL operators as JSON
+        // Send NoSQL operator payloads as JSON and see whether they are interpreted.
         const res = await api.post(endpoint, {
           data: JSON.stringify({
             email: payload.value,
@@ -567,20 +506,13 @@ test('Escape Chars: NoSQL operators filtered', async ({ baseURL }, testInfo) => 
       
       if (endpointFound) break;
     } catch (e) {
-      // Continue
+      // Continue to the next endpoint if this one does not respond.
     }
   }
   
   if (!endpointFound) {
-    reporter.reportWarning(
-      'Escape-character NoSQL probe could not run because no target endpoints responded.',
-      [
-        'Expose/document at least one auth or input-processing endpoint',
-        'Ensure CI target includes representative endpoints for NoSQL injection checks',
-        'Add route metadata so security tests can discover valid probe targets'
-      ],
-      OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
-    );
+    reporter.reportSkip('Escape-character NoSQL probe could not run because no target endpoints responded.');
+    test.skip(true, 'No target endpoints responded');
     return;
   }
   

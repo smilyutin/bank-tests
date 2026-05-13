@@ -37,7 +37,7 @@
 - **Login/UI selectors are centralized** for cross-app compatibility:
   - Edit `tests/security/selectors.config.ts` (arrays of fallback selectors).
   - Use the discovery helper script when selectors drift: `npm run discover:selectors` (script: `scripts/check-login-selectors.ts`).
-- **UI tests use Page Objects** in `tests/ui/pages/*` (e.g., `LoginPage`, `DashboardPage`). Add new UI flows by extending/adding page objects rather than scattering selectors.
+- **UI tests use Page Objects** in `tests/ui/page-objects/*` (e.g., `LoginPage`, `DashboardPage`). Add new UI flows by extending/adding page objects rather than scattering selectors.
 - **Test users are persisted** to `tests/fixtures/users.json` via `tests/utils/credentials.ts` (used by security helpers like `ensureTestUser()`).
 
 ## Reporting outputs (don’t rename lightly)

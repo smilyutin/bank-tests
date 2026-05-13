@@ -2,6 +2,17 @@ import { test, expect, request, APIRequestContext, APIResponse } from '@playwrig
 import { findOrCreateUser, User } from '../utils/credentials';
 import { validateSchema } from '../utils/schema-validator';
 import { SecurityReporter } from '../security/security-reporter';
+import { loadStoredToken } from '../utils/credentials';
+
+function getTokenHeaders(): Record<string, string> | undefined {
+  const token = loadStoredToken('user') || process.env.API_AUTH_TOKEN?.trim();
+  if (!token) return undefined;
+
+  return {
+    Authorization: `Bearer ${token}`,
+    'X-Auth-Token': token,
+  };
+}
 
 function isRedirect(status: number): boolean {
   return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
@@ -120,14 +131,27 @@ test.describe('API - Dashboard', () => {
     if (!baseURL) throw new Error('baseURL is not defined');
 
     const reporter = new SecurityReporter(testInfo);
-    const api = await request.newContext({ baseURL: baseURL.toString() });
+    const tokenHeaders = getTokenHeaders();
+    const api = await request.newContext({
+      baseURL: baseURL.toString(),
+      extraHTTPHeaders: tokenHeaders,
+    });
 
-    const user = findOrCreateUser('e2e');
-    const loggedIn = await tryApiLogin(api, user);
+    if (tokenHeaders) {
+      reporter.reportPass(
+        'Using API_AUTH_TOKEN from the environment for the authenticated dashboard check.',
+        'API2:2023 - Broken Authentication'
+      );
+    }
 
-    if (!loggedIn) {
-      reporter.reportSkip('Could not establish API-authenticated session through supported login endpoints.');
-      test.skip(true, 'Could not login via API candidates; skipping authenticated dashboard check');
+    if (!tokenHeaders) {
+      const user = findOrCreateUser('e2e');
+      const loggedIn = await tryApiLogin(api, user);
+
+      if (!loggedIn) {
+        reporter.reportSkip('Could not establish API-authenticated session through supported login endpoints.');
+        test.skip(true, 'Could not login via API candidates; skipping authenticated dashboard check');
+      }
     }
 
     const res = await api.get('/dashboard');
@@ -141,8 +165,9 @@ test.describe('API - Dashboard', () => {
     // After login we prefer 200; but some apps still require UI session flows.
     // Treat auth-required responses as a signal that /dashboard is not API-accessible.
     if (status === 401 || status === 403 || isRedirect(status)) {
-      reporter.reportSkip(`Dashboard requires non-API session handoff after login (status ${status}).`);
-      test.skip(true, `Dashboard not accessible via API session (status ${status})`);
+      const authMode = tokenHeaders ? 'provided bearer token' : 'API session login';
+      reporter.reportSkip(`Dashboard requires non-API session handoff after ${authMode} (status ${status}).`);
+      test.skip(true, `Dashboard not accessible via ${authMode} (status ${status})`);
     }
 
     expect(status, `Expected 200 after login, got ${status}`).toBe(200);

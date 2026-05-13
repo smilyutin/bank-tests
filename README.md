@@ -50,6 +50,8 @@ npm run allure:serve
 
 ### Security Test Categories
 
+Shared probe logic for these suites lives under `tests/security/sec-objects/<category>/`, keeping the spec files thin and grouped by concern.
+
 ```
 tests/security/
 ├── abuse/              Rate limiting, payload size
@@ -62,8 +64,19 @@ tests/security/
 ├── fuzzing/            Random inputs, malformed JSON, boundaries
 ├── input-attack/       Unicode, escape chars, path traversal
 ├── ci/                 Regression, token expiry, audit
+├── oauth/              OAuth/token lifecycle
 └── supply-chain/       Dependency security, SRI
 ```
+
+tests/security/sec-objects/
+├── authentication/     Shared auth/session probe logic
+├── authorization/      Shared access-control probe logic
+├── crossSiteReqForgery/ Shared CSRF probe logic
+├── fuzzing/            Shared fuzzing helper logic
+├── headers/            Shared header/fingerprinting helpers
+├── input-attack/       Shared input-anomaly helpers
+├── ci/                 Shared regression/audit helpers
+└── oauth/              Shared token-lifecycle helpers
 
 ## Reporting & Visualization
 

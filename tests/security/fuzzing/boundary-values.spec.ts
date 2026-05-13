@@ -1,5 +1,6 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
+import { generateBoundaryTests, isJsonTransportableBoundaryValue } from '../sec-objects/fuzzing/boundary-values.logic';
 
 /**
  * API Fuzzing - Boundary Value Tests (OWASP API8:2023)
@@ -22,90 +23,6 @@ import { SecurityReporter, OWASP_VULNERABILITIES } from '../security-reporter';
  * - Proper null/undefined handling
  * - No integer overflow leading to security bypasses
  */
-
-/**
- * Generate boundary value test cases
- */
-function generateBoundaryTests(): Array<{ name: string; field: string; value: any; expectValid: boolean }> {
-  return [
-    // Integer boundaries
-    { name: 'int32_max', field: 'age', value: 2147483647, expectValid: false },
-    { name: 'int32_min', field: 'age', value: -2147483648, expectValid: false },
-    { name: 'int32_max_plus_one', field: 'age', value: 2147483648, expectValid: false },
-    { name: 'int64_max', field: 'value', value: 9223372036854775807, expectValid: false },
-    { name: 'uint_max', field: 'count', value: 4294967295, expectValid: false },
-    
-    // Zero and near-zero
-    { name: 'zero', field: 'age', value: 0, expectValid: true },
-    { name: 'negative_one', field: 'age', value: -1, expectValid: false },
-    { name: 'positive_one', field: 'age', value: 1, expectValid: true },
-    { name: 'negative_zero', field: 'value', value: -0, expectValid: true },
-    
-    // Float boundaries
-    { name: 'float_max', field: 'price', value: Number.MAX_VALUE, expectValid: false },
-    { name: 'float_min', field: 'price', value: Number.MIN_VALUE, expectValid: true },
-    { name: 'float_epsilon', field: 'price', value: Number.EPSILON, expectValid: true },
-    { name: 'infinity', field: 'price', value: Infinity, expectValid: false },
-    { name: 'neg_infinity', field: 'price', value: -Infinity, expectValid: false },
-    { name: 'nan', field: 'price', value: NaN, expectValid: false },
-    
-    // String length boundaries
-    { name: 'empty_string', field: 'username', value: '', expectValid: false },
-    { name: 'single_char', field: 'username', value: 'a', expectValid: false },
-    { name: 'max_username_255', field: 'username', value: 'a'.repeat(255), expectValid: false },
-    { name: 'max_username_256', field: 'username', value: 'a'.repeat(256), expectValid: false },
-    { name: 'very_long_1k', field: 'bio', value: 'x'.repeat(1000), expectValid: false },
-    { name: 'very_long_10k', field: 'bio', value: 'y'.repeat(10000), expectValid: false },
-    { name: 'very_long_100k', field: 'description', value: 'z'.repeat(100000), expectValid: false },
-    
-    // Email boundaries
-    { name: 'min_email', field: 'email', value: 'a@b.c', expectValid: true },
-    { name: 'long_email_64_local', field: 'email', value: 'a'.repeat(64) + '@example.com', expectValid: true },
-    { name: 'long_email_65_local', field: 'email', value: 'a'.repeat(65) + '@example.com', expectValid: false },
-    { name: 'long_email_254_total', field: 'email', value: 'a'.repeat(240) + '@example.com', expectValid: false },
-    { name: 'email_at_boundary', field: 'email', value: 'test@' + 'a'.repeat(63) + '.com', expectValid: true },
-    
-    // Array boundaries
-    { name: 'empty_array', field: 'tags', value: [], expectValid: true },
-    { name: 'single_item_array', field: 'tags', value: ['tag1'], expectValid: true },
-    { name: 'large_array_100', field: 'tags', value: Array(100).fill('tag'), expectValid: false },
-    { name: 'large_array_1000', field: 'tags', value: Array(1000).fill('tag'), expectValid: false },
-    
-    // Null/undefined boundaries
-    { name: 'null_value', field: 'middleName', value: null, expectValid: true },
-    { name: 'undefined_value', field: 'suffix', value: undefined, expectValid: true },
-    { name: 'null_email', field: 'email', value: null, expectValid: false },
-    { name: 'undefined_password', field: 'password', value: undefined, expectValid: false },
-    
-    // Boolean edge cases
-    { name: 'boolean_true', field: 'active', value: true, expectValid: true },
-    { name: 'boolean_false', field: 'active', value: false, expectValid: true },
-    { name: 'string_true', field: 'active', value: 'true', expectValid: false },
-    { name: 'number_one_as_bool', field: 'active', value: 1, expectValid: false },
-    { name: 'number_zero_as_bool', field: 'active', value: 0, expectValid: false },
-    
-    // Date boundaries
-    { name: 'unix_epoch', field: 'birthdate', value: '1970-01-01', expectValid: true },
-    { name: 'year_2038', field: 'expiry', value: '2038-01-19', expectValid: true },
-    { name: 'year_1900', field: 'birthdate', value: '1900-01-01', expectValid: true },
-    { name: 'year_2100', field: 'futureDate', value: '2100-12-31', expectValid: true },
-    { name: 'invalid_date_feb30', field: 'date', value: '2024-02-30', expectValid: false },
-    { name: 'invalid_date_month13', field: 'date', value: '2024-13-01', expectValid: false },
-    
-    // Special numeric formats
-    { name: 'leading_zeros', field: 'code', value: '00123', expectValid: true },
-    { name: 'scientific_notation', field: 'value', value: 1.23e10, expectValid: true },
-    { name: 'hex_string', field: 'code', value: '0xFF', expectValid: true },
-    { name: 'negative_string', field: 'amount', value: '-100', expectValid: false },
-    
-    // Whitespace boundaries
-    { name: 'only_spaces', field: 'name', value: '   ', expectValid: false },
-    { name: 'leading_spaces', field: 'name', value: '  John', expectValid: true },
-    { name: 'trailing_spaces', field: 'name', value: 'John  ', expectValid: true },
-    { name: 'tabs_only', field: 'name', value: '\t\t\t', expectValid: false },
-    { name: 'newlines_only', field: 'name', value: '\n\n\n', expectValid: false },
-  ];
-}
 
 /**
  * Test: Numeric boundary values in user creation
@@ -135,10 +52,12 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Target the common create routes where numeric validation is usually enforced.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   const numericTests = generateBoundaryTests().filter(t => 
-    typeof t.value === 'number' || t.field.includes('age') || t.field.includes('value')
+    (typeof t.value === 'number' || t.field.includes('age') || t.field.includes('value')) &&
+    isJsonTransportableBoundaryValue(t.value)
   );
   
   let endpointFound = false;
@@ -147,6 +66,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
   
   for (const endpoint of endpoints) {
     try {
+      // Keep the sample small while still covering representative numeric edges.
       for (const test of numericTests.slice(0, 10)) {
         const testData = {
           email: 'boundary@test.com',
@@ -165,7 +85,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
         const status = res.status();
         const text = await res.text().catch(() => '');
         
-        // Check for server crashes
+        // Crashes or 500s at the boundary suggest unsafe numeric handling.
         if (status >= 500) {
           vulnerabilities.push({
             test: test.name,
@@ -176,7 +96,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
           });
         }
         
-        // Check for stack traces
+        // Error text that mentions overflow or trace details should be treated as exposure.
         if (/stack|traceback|overflow|exception/i.test(text)) {
           vulnerabilities.push({
             test: test.name,
@@ -186,7 +106,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
           });
         }
         
-        // If shouldn't be valid but was accepted
+        // Invalid values should not be accepted as successful input.
         if (!test.expectValid && [200, 201].includes(status)) {
           vulnerabilities.push({
             test: test.name,
@@ -197,7 +117,7 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
           });
         }
         
-        // Success case
+        // Count both expected successes and expected rejections as handled cases.
         if ((test.expectValid && [200, 201].includes(status)) || 
             (!test.expectValid && [400, 422].includes(status))) {
           passedTests++;
@@ -214,6 +134,19 @@ test('Boundary Values: numeric edge cases handled correctly', async ({ baseURL }
     reporter.reportSkip('No endpoints found for boundary value testing');
     test.skip(true, 'No endpoints found');
     return;
+  }
+
+  if (passedTests === 0) {
+    reporter.reportVulnerability('API8_SECURITY_MISCONFIGURATION', {
+      vulnerabilitiesFound: vulnerabilities.length,
+      passedTests,
+      issue: 'Boundary value test did not validate any successful/expected cases'
+    }, [
+      'Ensure at least one representative valid and invalid boundary case is exercised',
+      'Confirm the target endpoint accepts the test payload shape used by the fuzzing cases',
+      'Review API schema so the test can cover real numeric fields instead of non-applicable inputs'
+    ]);
+    expect(passedTests).toBeGreaterThan(0);
   }
   
   if (vulnerabilities.length > 0) {
@@ -255,6 +188,7 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Reuse the same create routes for string-length validation.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   const stringTests = generateBoundaryTests().filter(t => 
@@ -267,6 +201,7 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
   
   for (const endpoint of endpoints) {
     try {
+      // Keep the run compact while still hitting short and long strings.
       for (const test of stringTests.slice(0, 8)) {
         const testData = {
           email: 'length@test.com',
@@ -282,12 +217,12 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
         if (!res) continue;
         endpointFound = true;
         
-        // Check for crashes
+        // Crashes at long lengths indicate the parser or handler is not bounded.
         if (res.status() >= 500) {
           issues++;
         }
         
-        // Check if very long strings (>10k) were accepted
+        // Very long strings should be rejected or explicitly limited.
         if (test.value.length > 10000 && [200, 201].includes(res.status())) {
           acceptedExcessiveLength = true;
         }
@@ -318,12 +253,11 @@ test('Boundary Values: string length limits enforced', async ({ baseURL }, testI
     expect(issues).toBe(0);
   } else if (acceptedExcessiveLength) {
     reporter.reportWarning(
-      'API accepted very long strings (>10KB) without limits',
+      'Performance-only concern: the API accepted very long strings (>10KB) without crashing. This suggests missing size limits, but not a confirmed parser or injection vulnerability.',
       [
-        'Enforce reasonable string length limits',
-        'Prevent DoS through memory exhaustion',
-        'Document maximum field lengths',
-        'Validate input size before database operations'
+        'Treat this as a capacity/performance hardening issue unless crashes or error disclosure are observed.',
+        'Enforce reasonable string length limits and return 413/422 as appropriate.',
+        'Document maximum field lengths and validate input size before database operations.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -351,6 +285,7 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Probe the same create routes for null and undefined handling.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   const nullTests = generateBoundaryTests().filter(t => 
@@ -363,6 +298,7 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
   
   for (const endpoint of endpoints) {
     try {
+      // Exercise both required-field and optional-field null behavior.
       for (const test of nullTests) {
         const testData: any = {
           email: 'null@test.com',
@@ -395,7 +331,7 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
           crashes++;
         }
         
-        // Required fields (email, password) should reject null
+        // Required fields should reject null values rather than accepting them.
         if ((test.field === 'email' || test.field === 'password') && 
             test.value === null && 
             [200, 201].includes(status)) {
@@ -428,11 +364,11 @@ test('Boundary Values: null and undefined handled safely', async ({ baseURL }, t
     expect(crashes).toBe(0);
   } else if (mishandled > 0) {
     reporter.reportWarning(
-      `${mishandled} required fields accepted null values`,
+      `True vulnerability: ${mishandled} required fields accepted null values.`,
       [
-        'Validate required fields are present and non-null',
-        'Use schema validation (e.g., Joi, Yup, Zod)',
-        'Return 400 with clear error for missing required fields'
+        'Validate required fields are present and non-null.',
+        'Use schema validation (e.g., Joi, Yup, Zod).',
+        'Return 400 with a clear error for missing required fields.'
       ],
       OWASP_VULNERABILITIES.API8_SECURITY_MISCONFIGURATION.name
     );
@@ -460,6 +396,7 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
   }
   
   const api = await playwrightRequest.newContext({ baseURL: baseURL.toString() });
+  // Reuse the same routes for array-length boundary checks.
   const endpoints = ['/api/users', '/api/auth/register'];
   
   const arrayTests = [
@@ -476,6 +413,7 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
   
   for (const endpoint of endpoints) {
     try {
+      // Try a few representative sizes instead of blasting the endpoint.
       for (const test of arrayTests) {
         const startTime = Date.now();
         
@@ -493,10 +431,12 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
         if (!res) continue;
         endpointFound = true;
         
+        // A server error at size boundaries suggests the parser ran out of room.
         if (res.status() >= 500) {
           crashes++;
         }
         
+        // Slow responses point to performance pressure, not necessarily a crash.
         if (duration > 3000) {
           slowResponses++;
         }
@@ -522,11 +462,11 @@ test('Boundary Values: array size limits enforced', async ({ baseURL }, testInfo
     expect(crashes).toBe(0);
   } else if (slowResponses > 2) {
     reporter.reportWarning(
-      `${slowResponses} slow responses with large arrays - potential DoS`,
+      `Performance-only concern: ${slowResponses} slow responses with large arrays, but no crash was observed. This indicates parser or validation overhead rather than a confirmed vulnerability.`,
       [
-        'Implement array size limits',
-        'Validate array length before processing',
-        'Consider pagination for large datasets'
+        'Treat this as a capacity/performance hardening issue unless crashes or error disclosure are observed.',
+        'Implement array size limits and validate array length before processing.',
+        'Consider pagination for large datasets.'
       ],
       OWASP_VULNERABILITIES.API4_RATE_LIMIT.name
     );

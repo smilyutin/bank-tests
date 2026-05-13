@@ -81,7 +81,7 @@ npm run allure:open        # Open existing report
 | Category | File | OWASP | Priority |
 |----------|------|-------|----------|
 | Authorization | idor.spec.ts | API1 | HIGH |
-| Authorization | roleScoping.spec.ts | API5 | HIGH |
+| RBAC | roleScoping.spec.ts | API5 | HIGH |
 | Authentication | broken-authentication.spec.ts | API2 | HIGH |
 | Authentication | jwt.spec.ts | API2 | HIGH |
 | Authentication | bruteforce-lockout.spec.ts | API2 | MEDIUM |

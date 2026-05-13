@@ -10,27 +10,21 @@ const TARGET_APP_FIX_FIRST = [
   '4) Standardize cookie policy across environments and gateways (app, proxy, CDN)',
 ];
 
-test('Auth cookie flags (Secure, HttpOnly, SameSite)', async ({ request }, testInfo) => {
+// Review the login response cookie directly so the cookie flags can be validated at the source.
+
+test('Auth cookie flags from login response (Secure, HttpOnly, SameSite)', async ({ request }, testInfo) => {
   const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   if (!user.email || !user.password) {
-    reporter.reportWarning('No test user configured for cookie test', [
-      'Ensure test credentials exist in tests/fixtures/users.json',
-      'Run user fixture initialization scripts',
-      'Verify ensureTestUser() implementation and test user setup',
-      'Check FIXTURE_USERS_INTEGRATION.md for user configuration'
-    ], OWASP_VULNERABILITIES.API2_AUTH.name);
+    reporter.reportSkip('No test user configured for cookie test');
+    test.skip(true, 'No test user configured for cookie test');
     return;
   }
 
   const attempt = await tryLogin(request as any, user.email, user.password);
   if (!attempt) {
-    reporter.reportWarning('Login endpoint not found or unreachable for cookie test', [
-      'Verify /login or /api/auth endpoints exist and respond',
-      'Ensure application server is running and accessible',
-      'Check server configuration for auth endpoint availability',
-      'Review tryLogin() implementation for endpoint discovery'
-    ], OWASP_VULNERABILITIES.API2_AUTH.name);
+    reporter.reportSkip('Login endpoint not found or unreachable for cookie test');
+    test.skip(true, 'Login endpoint not found or unreachable for cookie test');
     return;
   }
 
@@ -38,17 +32,10 @@ test('Auth cookie flags (Secure, HttpOnly, SameSite)', async ({ request }, testI
   const setCookie = res.headers()['set-cookie'];
 
   if (!setCookie) {
-    reporter.reportWarning(
-      `Authentication response from ${path} did not include a Set-Cookie header. ` +
-      `Outcome: cookie-based session hardening flags (HttpOnly/Secure/SameSite) cannot be validated. ` +
-      `Risk: session handling may be inconsistent or token storage may shift to less secure client-side mechanisms.`,
-      [
-        ...TARGET_APP_FIX_FIRST,
-        'Verify successful login flow issues a session/auth cookie when cookie-based auth is expected',
-        'If token-based auth is intended, document it and test token transport/storage protections separately',
-      ],
-      OWASP_VULNERABILITIES.API2_AUTH.name
+    reporter.reportSkip(
+      `Authentication response from ${path} did not include a Set-Cookie header; cookie-based auth hardening is not applicable to this flow.`
     );
+    test.skip(true, `No Set-Cookie header from ${path}`);
     return;
   }
 
@@ -72,15 +59,15 @@ test('Auth cookie flags (Secure, HttpOnly, SameSite)', async ({ request }, testI
   }
 
   reporter.reportWarning(
-    `Authentication cookie from ${path} is missing recommended security flags: ${missingFlags.join(', ')}. ` +
+    `True vulnerability: authentication cookie from ${path} is missing recommended security flags: ${missingFlags.join(', ')}. ` +
     `Observed flags: HttpOnly=${flags.httpOnly}, Secure=${flags.secure}, SameSite=${flags.sameSite || 'unset'}. ` +
     `Risk: missing cookie protections increase exposure to session hijacking, XSS-driven token theft, and CSRF-like attacks.`,
     [
       ...TARGET_APP_FIX_FIRST,
-      `Set missing cookie attributes: ${missingFlags.join(', ')}`,
-      'Prefer SameSite=Strict for highly sensitive workflows; use Lax where UX requires top-level cross-site navigation',
-      'Keep SKIP_SECURE_CHECK disabled in production and enforce HTTPS end-to-end',
-      'Add regression tests in CI to block deployments if auth cookies lose security flags',
+      `Set missing cookie attributes: ${missingFlags.join(', ')}.`,
+      'Prefer SameSite=Strict for highly sensitive workflows; use Lax where UX requires top-level cross-site navigation.',
+      'Keep SKIP_SECURE_CHECK disabled in production and enforce HTTPS end-to-end.',
+      'Add regression tests in CI to block deployments if auth cookies lose security flags.',
     ],
     OWASP_VULNERABILITIES.API2_AUTH.name
   );

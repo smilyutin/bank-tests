@@ -3,6 +3,8 @@
 ## Overview
 Comprehensive security test suite created matching the reference architecture with **50+ security tests** across 8 major categories.
 
+> Shared probe logic is organized under `tests/security/sec-objects/<category>/` to mirror the spec folders.
+
 ## Test Structure
 
 ```

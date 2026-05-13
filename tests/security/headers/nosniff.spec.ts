@@ -49,6 +49,7 @@ test('X-Content-Type-Options: nosniff header present', async ({ page }, testInfo
 });
 
 test('X-Content-Type-Options: present on all resources', async ({ page }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   // Capture response stream to evaluate header consistency for loaded assets.
   await page.goto('/');
   

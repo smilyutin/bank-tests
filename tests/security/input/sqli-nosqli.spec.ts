@@ -186,6 +186,7 @@ test('SQLi: parameterized queries for search/filter', async ({ request }, testIn
  * 4. Ensure MongoDB operators are properly escaped
  */
 test('NoSQLi: MongoDB injection in queries', async ({ request }, testInfo) => {
+  const reporter = new SecurityReporter(testInfo);
   const user = await ensureTestUser(request as any);
   
   // Use MongoDB-style operators that should not be interpreted as query syntax.

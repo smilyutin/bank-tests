@@ -1,5 +1,6 @@
 import { SecurityReporter, OWASP_VULNERABILITIES } from '../../security-reporter';
 import { ensureTestUser } from '../../utils/utils';
+import { LOGOUT_SELECTORS, findFirstExisting } from '../../selectors.config';
 
 const TARGET_APP_FIX_FIRST = [
   'Implement idle session timeout (15-30 minutes recommended)',
@@ -195,8 +196,30 @@ class SessionTimeoutProbe {
     // Log in through the UI, then confirm logout removes access to protected content.
     await this.loginWithUi(page, email, password);
 
-    // Attempt logout.
-    await page.click('text=/logout/i').catch(() => {});
+    // Attempt logout using the centralized logout path/button selectors.
+    let loggedOut = false;
+    await page.goto(LOGOUT_SELECTORS.logoutPath, { timeout: 5000 }).then(() => {
+      loggedOut = true;
+    }).catch(() => {});
+
+    if (!loggedOut) {
+      for (const alternativePath of LOGOUT_SELECTORS.alternativePaths) {
+        await page.goto(alternativePath, { timeout: 5000 }).then(() => {
+          loggedOut = true;
+          return;
+        }).catch(() => {});
+        if (loggedOut) break;
+      }
+    }
+
+    if (!loggedOut) {
+      const logoutSelector = await findFirstExisting(page, LOGOUT_SELECTORS.logoutButton);
+      if (logoutSelector) {
+        await page.locator(logoutSelector).click({ timeout: 5000 }).catch(() => {});
+        loggedOut = true;
+      }
+    }
+
     await page.waitForTimeout(1000);
 
     // Access protected route.

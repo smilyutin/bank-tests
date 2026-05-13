@@ -1,6 +1,11 @@
 name: Scheduled Security Tests
 
 on:
+  # Run on PRs to main, merges to main, and every Friday at 2 AM UTC
+  pull_request:
+    branches:
+      - main
+
   # Run on merges to main and every Friday at 2 AM UTC
   push:
     branches:

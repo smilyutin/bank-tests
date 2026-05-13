@@ -257,3 +257,5 @@ test.describe('Dashboard functionality', () => {
     } else {
       expect(timeoutResult.currentUrl).toMatch(/\/dashboard/);
     }
+  });
+});

@@ -1,0 +1,2 @@
+
+ CSP: default-src is restrictive

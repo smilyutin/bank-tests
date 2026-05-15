@@ -1,0 +1,2 @@
+
+ CSP: Content-Security-Policy header present

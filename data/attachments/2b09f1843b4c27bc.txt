@@ -1,0 +1,2 @@
+
+ Third-party scripts: no inline event handlers

@@ -1,0 +1,2 @@
+
+ CORS: Access-Control-Allow-Origin is restrictive

@@ -1,0 +1,3 @@
+
+ Regression: CORS properly restricted
+   Reason: Test skipped: CORS configuration varies across environments: CORS reflects arbitrary origin. This may be intentional for development/staging or delegated to upstream gateway. Skipping environment-specific CORS validation.

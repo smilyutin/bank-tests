@@ -1,0 +1,3 @@
+
+ Supply chain: .npmrc or similar config exists
+   Reason: Test skipped: No .npmrc file was found, so registry configuration could not be validated.

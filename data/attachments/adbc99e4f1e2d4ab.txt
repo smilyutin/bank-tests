@@ -1,0 +1,3 @@
+
+ Mass assignment: updating card limits should not permit unauthorized fields
+   Reason: Test skipped: No candidate card update endpoints responded for mass-assignment probe. Checked: /api/cards/1, /api/cards/1/limits, /api/cards/1/limit, /api/cards/1/update, /api/cards/update, /api/cards, /cards/1, /cards/1/limits, /virtual-cards/1, /api/virtual-cards/1, /api/virtual-cards/1/limits

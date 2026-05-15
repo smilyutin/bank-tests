@@ -1,0 +1,2 @@
+
+ Clickjacking: CSP frame-ancestors directive present

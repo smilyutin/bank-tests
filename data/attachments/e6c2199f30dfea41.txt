@@ -1,0 +1,3 @@
+
+ Concurrent sessions are properly managed
+   Reason: Test skipped: No active sessions after login attempt; concurrent-session probe is not applicable.

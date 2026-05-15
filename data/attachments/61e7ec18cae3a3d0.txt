@@ -1,0 +1,3 @@
+
+ CSRF: requests without token are rejected
+   Reason: Test skipped: CSRF missing-token probe could not run because login failed or no bearer token was obtained.

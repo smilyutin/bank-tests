@@ -1,0 +1,2 @@
+
+ CORS: preflight requests properly validated

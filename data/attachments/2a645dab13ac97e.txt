@@ -1,0 +1,2 @@
+
+ CSRF: browser token rotates after login

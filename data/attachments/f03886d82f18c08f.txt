@@ -1,0 +1,3 @@
+
+ Browser auth cookie + storage inspection
+   Reason: Test skipped: No authentication cookie detected after login; cookie inspection is not applicable to this auth flow.

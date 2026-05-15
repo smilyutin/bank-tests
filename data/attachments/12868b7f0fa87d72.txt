@@ -1,0 +1,2 @@
+
+ SRI: external stylesheets have integrity attributes

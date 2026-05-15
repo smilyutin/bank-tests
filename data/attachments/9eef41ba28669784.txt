@@ -1,0 +1,3 @@
+
+ Excessive Data Exposure: GET user should not return sensitive fields (password)
+   Reason: Test skipped: No user endpoint responded for excessive data exposure checks. Tried: /api/users, /users, /api/v1/users

@@ -1,0 +1,3 @@
+
+ Escape Chars: path traversal sequences blocked
+   Reason: Test skipped: Escape-character path-traversal probe could not run because no target endpoints responded.

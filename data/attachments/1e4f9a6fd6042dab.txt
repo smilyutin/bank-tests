@@ -1,0 +1,2 @@
+
+ CSP: object-src is restricted

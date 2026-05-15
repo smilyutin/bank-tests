@@ -1,0 +1,2 @@
+
+ SQLi/NoSQLi: input sanitization in API endpoints

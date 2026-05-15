@@ -1,0 +1,2 @@
+
+ CORS: no origin reflection vulnerability

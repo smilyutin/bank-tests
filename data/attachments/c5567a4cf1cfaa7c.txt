@@ -1,0 +1,2 @@
+
+ Security headers: no information disclosure

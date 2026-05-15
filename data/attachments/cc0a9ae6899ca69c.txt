@@ -1,0 +1,2 @@
+
+ CSP: upgrade-insecure-requests directive present (if HTTPS)

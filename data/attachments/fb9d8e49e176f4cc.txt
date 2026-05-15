@@ -1,0 +1,3 @@
+
+ Session ID rotates on login to prevent fixation attacks
+   Reason: Test skipped: No session cookie set after login; session fixation probe is not applicable to this auth flow.

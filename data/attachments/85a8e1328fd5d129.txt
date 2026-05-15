@@ -1,0 +1,6 @@
+
+ CORS: dangerous methods blocked without proper origin
+
+ CORS: dangerous methods blocked without proper origin
+
+ CORS: dangerous methods blocked without proper origin

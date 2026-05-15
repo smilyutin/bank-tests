@@ -1,0 +1,3 @@
+
+ Role scoping: regular user cannot access admin endpoints
+   Reason: Test skipped: Admin-endpoint role-scoping probe could not run because login failed or no bearer token was obtained.

@@ -1,0 +1,2 @@
+
+ UI login shows generic error messages to prevent user enumeration

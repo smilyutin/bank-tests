@@ -1,0 +1,2 @@
+
+ XSS/Storage: sensitive tokens not in localStorage

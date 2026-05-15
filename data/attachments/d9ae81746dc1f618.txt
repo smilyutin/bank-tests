@@ -1,0 +1,2 @@
+
+ Referrer-Policy: uses secure value

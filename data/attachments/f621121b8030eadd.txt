@@ -1,0 +1,5 @@
+
+ OAuth: expired tokens rejected
+   Risk: CRITICAL | API2:2023 - Broken Authentication
+
+ OAuth: expired tokens rejected

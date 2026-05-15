@@ -1,0 +1,3 @@
+
+ Regression: critical security headers present
+   Reason: Test skipped: Security headers configuration skipped for this environment: missing [x-frame-options, x-content-type-options, strict-transport-security, content-security-policy], weakened []. Headers may be set by upstream reverse proxy or load balancer.

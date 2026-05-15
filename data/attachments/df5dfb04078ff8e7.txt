@@ -1,0 +1,2 @@
+
+ Broken authentication: weak passwords are rejected

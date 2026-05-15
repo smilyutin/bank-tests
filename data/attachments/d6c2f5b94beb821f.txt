@@ -1,0 +1,2 @@
+
+ Clickjacking: page cannot be embedded in iframe from different origin

@@ -1,0 +1,2 @@
+
+ Security headers: X-XSS-Protection removed or set to 0

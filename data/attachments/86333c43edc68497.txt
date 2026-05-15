@@ -1,0 +1,2 @@
+
+ Clickjacking: X-Frame-Options header present

@@ -1,0 +1,3 @@
+
+ JWT tokens properly validated against tampering and algorithm confusion
+   Reason: Test skipped: No JWT token was returned by login endpoint (/api/login), so JWT integrity checks are not applicable to this auth flow.

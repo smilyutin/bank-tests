@@ -1,0 +1,2 @@
+
+ Third-party scripts: analytics scripts use async/defer

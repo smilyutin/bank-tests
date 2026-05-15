@@ -1,0 +1,3 @@
+
+ Auth cookie flags from login response (Secure, HttpOnly, SameSite)
+   Reason: Test skipped: Authentication response from /api/login did not include a Set-Cookie header; cookie-based auth hardening is not applicable to this flow.

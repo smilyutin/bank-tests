@@ -1,0 +1,13 @@
+[error-handling] POST /api/virtual-cards/create => 401
+
+ API should return 4xx for invalid fields, not 500 with stack traces
+
+ API should return 4xx for invalid fields, not 500 with stack traces
+   Reason: Test skipped: POST /api/users not applicable (status 404)
+[error-handling] POST /api/login => 500
+
+ API should return 4xx for invalid fields, not 500 with stack traces
+
+ API should return 4xx for invalid fields, not 500 with stack traces
+
+ API should return 4xx for invalid fields, not 500 with stack traces

@@ -1,0 +1,2 @@
+
+ UI logout clears browser session state

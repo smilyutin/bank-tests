@@ -1,0 +1,3 @@
+
+ Role scoping: JWT does not expose sensitive role claims
+   Reason: Test skipped: JWT role-claim exposure probe could not run because login failed or no token was obtained.

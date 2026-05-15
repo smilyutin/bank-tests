@@ -1,0 +1,3 @@
+
+ Mass assignment: creating user should not allow role assignment
+   Reason: Test skipped: No user-create endpoint responded for role mass-assignment probe. Tried: /api/users, /api/auth/register, /api/register, /register

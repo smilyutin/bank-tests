@@ -1,0 +1,3 @@
+
+ CSRF: SameSite cookie attribute set
+   Reason: Test skipped: CSRF SameSite-cookie probe failed because no cookies were set during login.

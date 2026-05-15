@@ -1,0 +1,2 @@
+
+ Broken authentication: enumeration protection on login

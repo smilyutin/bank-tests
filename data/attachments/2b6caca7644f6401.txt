@@ -1,0 +1,8 @@
+
+ XSS: reflected XSS via URL parameters
+
+ XSS: reflected XSS via URL parameters
+
+ XSS: reflected XSS via URL parameters
+
+ XSS: reflected XSS via URL parameters

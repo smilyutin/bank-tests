@@ -1,0 +1,2 @@
+
+ Authentication bypass: direct dashboard access without credentials

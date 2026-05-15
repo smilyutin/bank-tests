@@ -1,0 +1,2 @@
+
+ Authentication bypass: JWT token manipulation

@@ -1,0 +1,2 @@
+
+ Referrer-Policy: meta tag matches header

@@ -1,0 +1,2 @@
+
+ Session timeout: UI logout should invalidate browser session token

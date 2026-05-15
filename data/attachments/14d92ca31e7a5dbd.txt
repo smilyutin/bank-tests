@@ -1,0 +1,2 @@
+
+ Security headers: no cache for authenticated resources

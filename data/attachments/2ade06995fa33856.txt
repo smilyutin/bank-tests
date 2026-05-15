@@ -1,0 +1,3 @@
+
+ CSRF: invalid token is rejected
+   Reason: Test skipped: CSRF invalid-token probe could not run because login failed or no bearer token was obtained.

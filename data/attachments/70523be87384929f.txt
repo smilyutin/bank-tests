@@ -1,0 +1,2 @@
+
+ Idle sessions are properly terminated after inactivity

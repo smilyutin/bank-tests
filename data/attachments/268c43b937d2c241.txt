@@ -1,0 +1,3 @@
+
+ IDOR: users cannot access other users resources by ID
+   Reason: Test skipped: IDOR probe could not run because login failed or no bearer token was obtained.

@@ -1,0 +1,2 @@
+
+ File Traversal: encoded traversal attempts blocked

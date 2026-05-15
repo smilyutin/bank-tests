@@ -1,0 +1,2 @@
+
+ HSTS: max-age is sufficiently long

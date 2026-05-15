@@ -1,0 +1,3 @@
+
+ Regression: rate limiting enforced
+   Reason: Test skipped: Rate limiting not detected in this environment - may be disabled, set at API gateway level, or using different transport. Skipping environment-specific rate limit checks.

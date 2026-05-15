@@ -1,0 +1,3 @@
+
+ Role scoping: operations limited by scope
+   Reason: Test skipped: Scoped-operations probe could not run because login failed or no bearer token was obtained.

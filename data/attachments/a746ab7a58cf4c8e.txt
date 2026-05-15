@@ -1,0 +1,3 @@
+
+ Role scoping: role elevation attempts blocked
+   Reason: Test skipped: Role-elevation probe could not run because login failed or no bearer token was obtained.

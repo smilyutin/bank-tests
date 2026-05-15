@@ -1,0 +1,2 @@
+
+ SRI: external scripts have integrity attributes

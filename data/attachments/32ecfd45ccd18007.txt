@@ -1,0 +1,2 @@
+
+ HSTS: Strict-Transport-Security header present on HTTPS

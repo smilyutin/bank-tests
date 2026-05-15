@@ -1,0 +1,2 @@
+
+ Fuzzing: authentication endpoint handles random inputs

@@ -1,0 +1,2 @@
+
+ CSRF: double submit cookie pattern or synchronizer token
